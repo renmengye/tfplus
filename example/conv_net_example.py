@@ -1,13 +1,14 @@
-import sys
-print sys.path
+"""
+Train a simple ConvNet on MNIST.
+Usage: python conv_net_example.py --help
+"""
 
 import numpy as np
 import tensorflow as tf
 import tfplus
 import tfplus.data.mnist
-import time
 
-tfplus.init('Train a conv net example')
+tfplus.init('Train a simple ConvNet on MNIST')
 tfplus.cmd_args.add('inp_height', 'int', 28)
 tfplus.cmd_args.add('inp_width', 'int', 28)
 tfplus.cmd_args.add('inp_depth', 'int', 1)
