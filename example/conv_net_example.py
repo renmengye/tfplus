@@ -71,8 +71,7 @@ class ConvNetExampleModel(tfplus.nn.Model):
         mlp_act = [tf.nn.relu, tf.nn.softmax]
         with tf.device(self.get_device_fn()):
             self.cnn = tfplus.nn.CNN(cnn_filters, cnn_channels, cnn_pool,
-                                     cnn_act, cnn_use_bn,
-                                     phase_train=phase_train, wd=wd)
+                                     cnn_act, cnn_use_bn, wd=wd)
             self.mlp = tfplus.nn.MLP(mlp_dim, mlp_act)
             global_step = tf.Variable(0.0)
             self.register_var('step', global_step)
@@ -83,11 +82,12 @@ class ConvNetExampleModel(tfplus.nn.Model):
         self.lazy_init_var()
         with tf.device(self.get_device_fn()):
             x = inp['x']
-            h_cnn = self.cnn(inp['x'])
+            phase_train = inp['phase_train']
+            h_cnn = self.cnn({'input': x, 'phase_train': phase_train})
             self.register_var('h_cnn', h_cnn)
             cnn_dim = self.get_option('cnn_depth')[-1]
             h_cnn = tf.reshape(h_cnn, [-1, cnn_dim * 2 * 2])
-            y_out = self.mlp(h_cnn)
+            y_out = self.mlp({'input': h_cnn, 'phase_train': phase_train})
             pass
         return {
             'y_out': y_out

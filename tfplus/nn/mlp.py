@@ -5,7 +5,7 @@ import tensorflow as tf
 class MLP(GraphBuilder):
 
     def __init__(self, dims, act, add_bias=True, dropout_keep=None,
-                 phase_train=None, wd=None, scope='mlp', init_weights=None,
+                 wd=None, scope='mlp', init_weights=None,
                  frozen=None):
         """Add MLP. N = number of layers.
 
@@ -13,7 +13,6 @@ class MLP(GraphBuilder):
             dims: layer-wise dimensions, list of N int
             act: activation function, list of N function
             dropout_keep: keep prob of dropout, list of N float
-            phase_train: whether in training phase, tf bool variable
             wd: weight decay
         """
         self.nlayers = len(dims) - 1
@@ -23,7 +22,6 @@ class MLP(GraphBuilder):
         self.act = act
         self.add_bias = add_bias
         self.dropout_keep = dropout_keep
-        self.phase_train = phase_train
         self.wd = wd
         self.scope = scope
         self.init_weights = init_weights
@@ -82,7 +80,8 @@ class MLP(GraphBuilder):
 
     def build(self, inp):
         self.lazy_init_var()
-        x = self.get_single_input(inp)
+        x = inp['input']
+        phase_train = inp['phase_train']
         h = [None] * self.nlayers
         with tf.variable_scope(self.scope):
             for ii in xrange(self.nlayers):
@@ -95,7 +94,7 @@ class MLP(GraphBuilder):
                     if self.dropout_keep is not None:
                         if self.dropout_keep[ii] is not None:
                             prev_inp = nn.Dropout(self.dropout_keep[ii], 
-                                self.phase_train)(prev_inp)
+                                phase_train)(prev_inp)
 
                     h[ii] = tf.matmul(prev_inp, self.w[ii])
 

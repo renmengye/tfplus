@@ -8,7 +8,7 @@ from batch_norm import BatchNorm
 
 class CNN(GraphBuilder):
 
-    def __init__(self, f, ch, pool, act, use_bn, phase_train=None, wd=None,
+    def __init__(self, f, ch, pool, act, use_bn, wd=None,
                  scope='cnn', init_weights=None, frozen=None, 
                  shared_weights=None):
         """Add CNN. N = number of layers.
@@ -19,7 +19,6 @@ class CNN(GraphBuilder):
             pool: pooling ratio, list of N int
             act: activation function, list of N function
             use_bn: whether to use batch normalization, list of N bool
-            phase_train: whether in training phase, tf bool variable
             wd: weight decay
         """
         self.filter_size = f
@@ -27,7 +26,6 @@ class CNN(GraphBuilder):
         self.pool = pool
         self.act = act
         self.use_bn = use_bn
-        self.phase_train = phase_train
         self.wd = wd
         self.scope = scope
         self.init_weights = init_weights
@@ -97,14 +95,21 @@ class CNN(GraphBuilder):
             pass
         pass
 
+    def get_layer(self, n):
+        """Get a layer."""
+        return self.hidden_layers[n]
+
     def build(self, inp):
         """Run CNN on an input.
 
         Args:
-            x: input image, [B, H, W, D]
+            input: input image, [B, H, W, D]
+            phase_train: phase train, bool
         """
         self.lazy_init_var()
-        x = self.get_single_input(inp)
+        x = inp['input']
+        phase_train = inp['phase_train']
+
         h = [None] * self.nlayers
         with tf.variable_scope(self.scope):
             for ii in xrange(self.nlayers):
@@ -135,7 +140,7 @@ class CNN(GraphBuilder):
                             init_beta = None
                             init_gamma = None
 
-                        batch_norm = BatchNorm(out_ch, self.phase_train,
+                        batch_norm = BatchNorm(out_ch, phase_train,
                             scope2='{}_{}_{}'.format(
                                 self.scope, ii, self.num_copies),
                             init_beta=init_beta,
@@ -151,5 +156,6 @@ class CNN(GraphBuilder):
                 pass
             pass
         self.num_copies += 1
+        self.hidden_layers = h
         return h[-1]
     pass

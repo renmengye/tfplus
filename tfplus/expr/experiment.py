@@ -18,6 +18,7 @@ from __future__ import division
 
 import os
 import tensorflow as tf
+import sys
 
 from tfplus.utils import cmd_args, Factory, OptionBase, Saver, logger
 from tfplus.utils import time_series_logger as ts_logger
@@ -143,8 +144,14 @@ class TrainExperiment(Experiment):
 
         # Register model hyperparams.
         self.model.save_options(self.logs_folder, 'model')
-        LogManager(self.logs_folder).register(
+        log_manager = LogManager(self.logs_folder)
+        log_manager.register(
             'model.yaml', 'plain', 'Model Hyperparameters')
+        cmd_fname = os.path.join(self.logs_folder, 'cmd.log')
+        with open(cmd_fname, 'w') as f:
+            f.write(' '.join(sys.argv))
+        log_manager.register(
+            'cmd.log', 'plain', 'Command-line Arguments')
 
         # Counters
         count = 0
