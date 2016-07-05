@@ -37,6 +37,9 @@ class GraphBuilder(object):
         self._var_dict[name] = var
         pass
 
+    def has_var(self, name):
+        return name in self._var_dict
+
     def get_var(self, name):
         """Get a variable.
 

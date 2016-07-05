@@ -24,6 +24,7 @@ class DCNN(GraphBuilder):
         self.nlayers = len(f)
         self.w = [None] * self.nlayers
         self.b = [None] * self.nlayers
+        self.batch_norm = [None] * self.nlayers
         self.num_copies = 0
 
         super(DCNN, self).__init__()
@@ -130,11 +131,11 @@ class DCNN(GraphBuilder):
                             init_beta = None
                             init_gamma = None
 
-                        batch_norm = BatchNorm(out_ch,
-                                               init_beta=init_beta,
-                                               init_gamma=init_gamma)
+                        self.batch_norm[ii] = BatchNorm(out_ch,
+                                                        init_beta=init_beta,
+                                                        init_gamma=init_gamma)
 
-                        h[ii] = batch_norm(
+                        h[ii] = self.batch_norm[ii](
                             {'input': h[ii], 'phase_train': phase_train})
 
                     if self.act[ii] is not None:

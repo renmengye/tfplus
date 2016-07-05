@@ -100,8 +100,8 @@ class Model(GraphBuilder, OptionBase):
 
     def _restore_from(self, folder):
         """Sets all basic info of restoration."""
-        self._saver = Saver(folder)
-        info = self._saver.get_ckpt_info()
+        saver = Saver(folder)
+        info = saver.get_ckpt_info()
         self._id = info['model_id']
         self._restore = folder
         self._ckpt_fname = info['ckpt_fname']
@@ -118,6 +118,11 @@ class Model(GraphBuilder, OptionBase):
         self.set_all_options(self.read_options(self.folder, 'model'))
         pass
 
+    def restore_options_from(self, folder):
+        """Restore all model options, not the weights."""
+        self.set_all_options(self.read_options(self.folder, 'model'))
+        pass
+
     @property
     def restore_step(self):
         return self._restore_step
@@ -125,6 +130,13 @@ class Model(GraphBuilder, OptionBase):
     @property
     def results_folder(self):
         return self._results_folder
+
+    @property
+    def saver(self):
+        if self._saver is None:
+            self._saver = Saver(self.folder, self.get_restore_var_dict())
+        return self._saver
+    
 
     def parse_opt(self):
         """Parse the options from command line. Handles restoring logic."""
@@ -164,11 +176,9 @@ class Model(GraphBuilder, OptionBase):
         Args:
             sess: tensorflow session
         """
+        sess.run(tf.initialize_all_variables())
         if self._restore is not None:
-            self._saver.restore(sess, self._ckpt_fname)
-            pass
-        else:
-            sess.run(tf.initialize_all_variables())
+            self.saver.restore(sess, self._ckpt_fname)
             pass
         return self
 
@@ -179,10 +189,8 @@ class Model(GraphBuilder, OptionBase):
             sess: tensorflow session
             step: number of steps
         """
-        if self._saver is None:
-            self._saver = Saver(self.folder)
-            self.save_options(self.folder, 'model')
-        self._saver.save(sess, global_step=step)
+        self.save_options(self.folder, 'model')
+        self.saver.save(sess, global_step=step)
         pass
 
     def has_input_var(self, name):
@@ -289,4 +297,8 @@ class Model(GraphBuilder, OptionBase):
             output_var = self.build(inp_var)
             self.build_loss_grad(inp_var, output_var)
         return self
+
+    def get_restore_var_dict(self):
+        """Get a dictionary of variables to restore."""
+        raise Exception('Not implemented')
     pass

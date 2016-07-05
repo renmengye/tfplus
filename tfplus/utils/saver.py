@@ -4,14 +4,12 @@ import os
 import yaml
 import tensorflow as tf
 
-kModelOptFilename = 'model_opt.yaml'
-kDatasetOptFilename = 'dataset_opt.yaml'
 kMaxToKeep = 2
 
 
 class Saver():
 
-    def __init__(self, folder, model_opt=None, data_opt=None):
+    def __init__(self, folder, var_dict=None):
 
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -19,13 +17,10 @@ class Saver():
         self.folder = folder
         self.log = logger.get()
         self.tf_saver = None
-
-        if model_opt is not None:
-            self.save_opt(os.path.join(folder, kModelOptFilename), model_opt)
-
-        if data_opt is not None:
-            self.save_opt(os.path.join(folder, kDatasetOptFilename), data_opt)
-
+        if var_dict is None:
+            self.var_dict = tf.all_variables()
+        else:
+            self.var_dict = var_dict
         pass
 
     def save(self, sess, global_step=None):
@@ -36,15 +31,11 @@ class Saver():
         """
         if self.tf_saver is None:
             self.tf_saver = tf.train.Saver(
-                tf.all_variables(), max_to_keep=kMaxToKeep)
+                self.var_dict, max_to_keep=kMaxToKeep)
         ckpt_path = os.path.join(self.folder, 'model.ckpt')
         self.log.info('Saving checkpoint to {}'.format(ckpt_path))
         self.tf_saver.save(sess, ckpt_path, global_step=global_step)
         pass
-
-    def save_opt(self, fname, opt):
-        with open(fname, 'w') as f:
-            yaml.dump(opt, f, default_flow_style=False)
 
     def get_latest_ckpt(self):
         """Get the latest checkpoint filename in a folder."""
@@ -75,22 +66,6 @@ class Saver():
 
         model_id = os.path.basename(self.folder.rstrip('/'))
         self.log.info('Restoring from {}'.format(self.folder))
-        model_opt_fname = os.path.join(self.folder, kModelOptFilename)
-        data_opt_fname = os.path.join(self.folder, kDatasetOptFilename)
-
-        if os.path.exists(model_opt_fname):
-            with open(model_opt_fname) as f_opt:
-                model_opt = yaml.load(f_opt)
-        else:
-            model_opt = None
-
-        self.log.info('Model options: {}'.format(model_opt))
-
-        if os.path.exists(data_opt_fname):
-            with open(data_opt_fname) as f_opt:
-                data_opt = yaml.load(f_opt)
-        else:
-            data_opt = None
 
         ckpt_fname, graph_fname, latest_step = self.get_latest_ckpt()
         self.log.info('Restoring at step {}'.format(latest_step))
@@ -98,8 +73,6 @@ class Saver():
         return {
             'ckpt_fname': ckpt_fname,
             'graph_fname': graph_fname,
-            'model_opt': model_opt,
-            'data_opt': data_opt,
             'step': latest_step,
             'model_id': model_id
         }
@@ -110,7 +83,7 @@ class Saver():
             ckpt_fname = self.get_latest_ckpt()[0]
 
         if self.tf_saver is None:
-            self.tf_saver = tf.train.Saver(tf.all_variables())
+            self.tf_saver = tf.train.Saver(self.var_dict)
 
         self.tf_saver.restore(sess, ckpt_fname)
 

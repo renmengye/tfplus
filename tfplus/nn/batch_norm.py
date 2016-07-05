@@ -5,7 +5,8 @@ import tensorflow as tf
 class BatchNorm(GraphBuilder):
 
     def __init__(self, n_out, scope='bn',
-                 affine=True, init_beta=None, init_gamma=None, frozen=False):
+                 affine=True, init_beta=None, init_gamma=None, frozen=False,
+                 decay=0.9):
         super(BatchNorm, self).__init__()
         self.n_out = n_out
         self.scope = scope
@@ -13,6 +14,7 @@ class BatchNorm(GraphBuilder):
         self.init_beta = init_beta
         self.init_gamma = init_gamma
         self.frozen = frozen
+        self.decay = decay
         pass
 
     def init_var(self):
@@ -29,6 +31,11 @@ class BatchNorm(GraphBuilder):
             self.gamma = self.declare_var(
                 [self.n_out], init_val=self.init_gamma, name='gamma',
                 trainable=trainable)
+
+            # phase_train_f = tf.to_float(phase_train)
+            # _decay = 1 - (1 - decay) * phase_train_f
+            # _decay = decay
+            self.ema = tf.train.ExponentialMovingAverage(decay=self.decay)
             pass
         pass
 
@@ -38,23 +45,20 @@ class BatchNorm(GraphBuilder):
         phase_train = inp['phase_train']
 
         with tf.variable_scope(self.scope):
-            batch_mean, batch_var = tf.nn.moments(x, [0, 1, 2], name='moments')
-            batch_mean.set_shape([self.n_out])
-            batch_var.set_shape([self.n_out])
-
-            phase_train_f = tf.to_float(phase_train)
-            decay = 1 - 0.1 * phase_train_f
-            ema = tf.train.ExponentialMovingAverage(decay=decay)
+            self.batch_mean, self.batch_var = tf.nn.moments(
+                x, [0, 1, 2], name='moments')
+            self.batch_mean.set_shape([self.n_out])
+            self.batch_var.set_shape([self.n_out])
 
             def mean_var_with_update():
-                ema_apply_op_local = ema.apply([batch_mean, batch_var])
+                ema_apply_op_local = self.ema.apply(
+                    [self.batch_mean, self.batch_var])
                 with tf.control_dependencies([ema_apply_op_local]):
-                    return tf.identity(batch_mean), tf.identity(batch_var)
+                    return tf.identity(self.batch_mean), \
+                        tf.identity(self.batch_var)
 
             def mean_var_no_update():
-                ema_mean_local, ema_var_local = ema.average(
-                    batch_mean), ema.average(batch_var)
-                return ema_mean_local, ema_var_local
+                return self.get_shadow_ema()
 
             mean, var = tf.cond(phase_train,
                                 mean_var_with_update,
@@ -62,4 +66,8 @@ class BatchNorm(GraphBuilder):
             normed = tf.nn.batch_normalization(
                 x, mean, var, self.beta, self.gamma, 1e-3)
         return normed
+
+    def get_shadow_ema(self):
+        return self.ema.average(self.batch_mean), \
+            self.ema.average(self.batch_var)
     pass
