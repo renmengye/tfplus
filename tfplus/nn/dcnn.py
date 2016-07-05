@@ -270,14 +270,11 @@ def dcnn(f, ch, pool, act, use_bn, skip_ch=None, phase_train=None, wd=None, scop
                             init_beta = None
                             init_gamma = None
 
-                        # with tf.variable_scope('layer_{}'.format(ii)):
-                        # with tf.variable_scope('copy_{}'.format(copy[0])):
+                        batch_norm = BatchNorm(out_ch,
+                                               init_beta=init_beta,
+                                               init_gamma=init_gamma)
                         h[ii] = batch_norm(
-                            h[ii], out_ch, phase_train,
-                            scope2='{}_{}_{}'.format(scope, ii, copy[0]),
-                            init_beta=init_beta,
-                            init_gamma=init_gamma,
-                            model=model)
+                            {'input': h[ii], 'phase_train': phase_train })
 
                     if act[ii] is not None:
                         h[ii] = act[ii](h[ii])
