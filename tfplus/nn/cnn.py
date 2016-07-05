@@ -157,4 +157,19 @@ class CNN(GraphBuilder):
         self.num_copies += 1
         self.hidden_layers = h
         return h[-1]
+
+    def get_save_var_dict(self):
+        results = {}
+        for ii in xrange(self.nlayers):
+            prefix = 'layer_{}/'.format(ii)
+            results[prefix + 'w'] = self.w[ii]
+            results[prefix + 'b'] = self.b[ii]
+            bn = self.batch_norm[ii]
+            results[prefix + 'bn/beta'] = bn.beta
+            results[prefix + 'bn/gamma'] = bn.gamma
+            ema_mean, ema_var = bn.get_shadow_ema()
+            results[prefix + 'bn/ema_mean'] = ema_mean
+            results[prefix + 'bn/ema_var'] = ema_var
+            pass
+        return results
     pass

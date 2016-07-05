@@ -24,9 +24,7 @@ from tfplus.utils import cmd_args, Factory, OptionBase, Saver, logger
 from tfplus.utils import time_series_logger as ts_logger
 from tfplus.utils import plotter, listener, LogManager
 
-cmd_args.add('logs', 'str', '../logs')
 cmd_args.add('num_steps', 'int', 500000)
-cmd_args.add('localhost', 'str', 'http://localhost')
 
 _factory = None
 
@@ -56,7 +54,6 @@ class Experiment(OptionBase):
         super(Experiment, self).__init__()
         self.log = logger.get()
         self.log.log_args()
-        self.register_option('logs')
         self._sess = sess
         self._model = model
         pass
@@ -98,19 +95,30 @@ class TrainExperiment(Experiment):
         super(TrainExperiment, self).__init__(sess=sess, model=model)
         self.runners = {}
         self.register_option('num_steps')
-        self.register_option('localhost')
-        self.register_option('logs')
         # self.log_manager = None
+        self._logs_folder = '../logs'
+        self._localhost = 'http://localhost'
         self.ts_loggers = {}
         pass
 
     @property
     def logs_folder(self):
-        logs_folder = os.path.join(self.get_option('logs'), self.model.id)
-        if not os.path.exists(logs_folder):
-            os.makedirs(logs_folder)
+        if not os.path.exists(self._logs_folder):
+            os.makedirs(self._logs_folder)
             pass
-        return logs_folder
+        return self._logs_folder
+
+    def set_logs_folder(self, value):
+        self._logs_folder = value
+        return self
+
+    @property
+    def localhost(self):
+        return self._localhost
+
+    def set_localhost(self, value):
+        self._localhost = value
+        return self
 
     def add_runner(self, runner):
         self.runners[runner.name] = runner
@@ -122,8 +130,7 @@ class TrainExperiment(Experiment):
         if name not in self.ts_loggers:
             self.ts_loggers[name] = ts_logger.register(
                 os.path.join(self.logs_folder, name + '.csv'), labels, name,
-                buffer_size=1,
-                restore_step=self.model.restore_step)
+                buffer_size=1)
         else:
             raise Exception('TS logger "{}" already registered'.format(name))
         return self
@@ -135,12 +142,15 @@ class TrainExperiment(Experiment):
             **kwargs))
         return self
 
+    def restore_logs(self, logs_folder):
+        return self
+
     def run(self):
         if 'train' not in self.runners:
             raise Exception('Need to specify runner "train"')
 
-        self.url = os.path.join(self.get_option(
-            'localhost'), 'deep-dashboard') + '?id=' + self.model.id
+        self.url = os.path.join(self.localhost, 'deep-dashboard') + '?id=' + \
+            self.logs_folder.split('/')[-1]
 
         # Register model hyperparams.
         self.model.save_options(self.logs_folder, 'model')
@@ -169,10 +179,8 @@ class TrainExperiment(Experiment):
                     pass
                 pass
 
-            # Model ID reminder
+            # Dashboard reminder
             if count % 10 == 0:
-                self.log.info('Model ID {}'.format(
-                    self.runners['train'].model.id))
                 self.log.info('Dashboard {}'.format(self.url))
                 pass
 

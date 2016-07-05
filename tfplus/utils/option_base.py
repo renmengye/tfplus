@@ -57,8 +57,11 @@ class OptionBase(object):
     def read_options(self, folder, name):
         return OptionSaver(folder, name).read()
 
+    def get_options_for_save(self):
+        return self._opt
+
     def save_options(self, folder, name):
-        OptionSaver(folder, name).save(self._opt)
+        OptionSaver(folder, name).save(self.get_options_for_save())
         pass
 
     def get_default_option(self, name):

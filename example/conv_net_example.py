@@ -4,11 +4,21 @@ Usage: python conv_net_example.py --help
 """
 
 import numpy as np
+import os
 import tensorflow as tf
 import tfplus
 import tfplus.data.mnist
 
 tfplus.init('Train a simple ConvNet on MNIST')
+# Main options
+tfplus.cmd_args.add('gpu', 'int', -1)
+tfplus.cmd_args.add('results', 'str', '../results')
+tfplus.cmd_args.add('logs', 'str', '../logs')
+tfplus.cmd_args.add('localhost', 'str', 'http://localhost')
+tfplus.cmd_args.add('restore_model', 'str', None)
+tfplus.cmd_args.add('restore_logs', 'str', None)
+
+# Model options
 tfplus.cmd_args.add('inp_height', 'int', 28)
 tfplus.cmd_args.add('inp_width', 'int', 28)
 tfplus.cmd_args.add('inp_depth', 'int', 1)
@@ -20,8 +30,8 @@ tfplus.cmd_args.add('mlp_dims', 'list<int>', [100, 10])
 
 class ConvNetExampleModel(tfplus.nn.Model):
 
-    def __init__(self):
-        super(ConvNetExampleModel, self).__init__()
+    def __init__(self, name='conv_net_ex'):
+        super(ConvNetExampleModel, self).__init__(name=name)
         self.register_option('inp_height')
         self.register_option('inp_width')
         self.register_option('inp_depth')
@@ -110,26 +120,12 @@ class ConvNetExampleModel(tfplus.nn.Model):
         self.register_var('acc', acc)
         pass
 
-    def get_restore_var_dict(self):
+    def get_save_var_dict(self):
         results = {}
         if self.has_var('step'):
             results['step'] = self.get_var('step')
-        for ii in xrange(len(self.get_option('cnn_filter_size'))):
-            prefix = 'cnn/layer_{}/'.format(ii)
-            results[prefix + 'w'] = self.cnn.w[ii]
-            results[prefix + 'b'] = self.cnn.b[ii]
-            bn = self.cnn.batch_norm[ii]
-            results[prefix + 'bn/beta'] = bn.beta
-            results[prefix + 'bn/gamma'] = bn.gamma
-            ema_mean, ema_var = self.cnn.batch_norm[ii].get_shadow_ema()
-            results[prefix + 'bn/ema_mean'] = ema_mean
-            results[prefix + 'bn/ema_var'] = ema_var
-            pass
-        for ii in xrange(len(self.get_option('mlp_dims'))):
-            prefix = 'mlp/layer_{}/'.format(ii)
-            results[prefix + 'w'] = self.mlp.w[ii]
-            results[prefix + 'b'] = self.mlp.b[ii]
-            pass
+        self.add_prefix_to('cnn', self.cnn.get_save_var_dict(), results)
+        self.add_prefix_to('mlp', self.mlp.get_save_var_dict(), results)
         [self.log.info(v) for v in results.items()]
         return results
     pass
@@ -139,12 +135,31 @@ tfplus.nn.model.register('conv_net_example', ConvNetExampleModel)
 
 
 if __name__ == '__main__':
+    opt = tfplus.cmd_args.make()
+
+    # Initialize logging.
+    uid = tfplus.nn.model.gen_id('conv_net_ex')
+    logs_folder = os.path.join(opt['logs'], uid)
+    log = tfplus.utils.logger.get(os.path.join(logs_folder, 'raw'))
+    tfplus.utils.LogManager(logs_folder).register('raw', 'plain', 'Raw Logs')
+
     # Initialize session.
     sess = tf.Session()
 
     # Initialize model.
     model = (tfplus.nn.model.create_from_main('conv_net_example')
-             .set_name('conv_net_ex')).build_all().init(sess)
+             .set_name('conv_net_ex')
+             .set_gpu(opt['gpu']))
+    results_folder = os.path.join(opt['results'], uid)
+    model.set_folder(results_folder)
+
+    # Restore with model options.
+    model.restore_options_from(opt['restore_model'])
+    model.build_all()
+
+    # Initialize variables (including restored weights).
+    sess.run(tf.initialize_all_variables())
+    model.restore_weights_from(sess, opt['restore_model'])
 
     # Initialize data.
     data = {}
@@ -156,6 +171,9 @@ if __name__ == '__main__':
     (tfplus.experiment.create_from_main('train')
      .set_session(sess)
      .set_model(model)
+     .restore_logs(opt['restore_logs'])
+     .set_logs_folder(os.path.join(opt['logs'], uid))
+     .set_localhost(opt['localhost'])
      .add_csv_output('Loss', ['train'])
      .add_csv_output('Accuracy', ['train', 'valid'])
      .add_csv_output('Step Time', ['train'])

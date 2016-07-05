@@ -2,6 +2,7 @@ from graph_builder import GraphBuilder
 
 import tensorflow as tf
 
+
 class MLP(GraphBuilder):
 
     def __init__(self, dims, act, add_bias=True, dropout_keep=None,
@@ -28,7 +29,7 @@ class MLP(GraphBuilder):
         self.frozen = frozen
 
         super(MLP, self).__init__()
-        
+
         self.log.info('MLP: {}'.format(scope))
         self.log.info('Dimensions: {}'.format(dims))
         self.log.info('Activation: {}'.format(act))
@@ -93,8 +94,8 @@ class MLP(GraphBuilder):
 
                     if self.dropout_keep is not None:
                         if self.dropout_keep[ii] is not None:
-                            prev_inp = nn.Dropout(self.dropout_keep[ii], 
-                                phase_train)(prev_inp)
+                            prev_inp = nn.Dropout(self.dropout_keep[ii],
+                                                  phase_train)(prev_inp)
 
                     h[ii] = tf.matmul(prev_inp, self.w[ii])
 
@@ -109,4 +110,13 @@ class MLP(GraphBuilder):
                 pass
             pass
         return h[-1]
+
+    def get_save_var_dict(self):
+        results = {}
+        for ii in xrange(self.nlayers):
+            prefix = 'layer_{}/'.format(ii)
+            results[prefix + 'w'] = self.w[ii]
+            results[prefix + 'b'] = self.b[ii]
+            pass
+        return results
     pass

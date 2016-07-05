@@ -3,13 +3,8 @@ from graph_builder import GraphBuilder
 import os
 import tensorflow as tf
 
-from tfplus.utils import cmd_args, assign_model_id, OptionBase, Saver, Factory
+from tfplus.utils import assign_model_id, OptionBase, Saver, Factory
 from tfplus.utils import logger
-
-cmd_args.add('gpu', 'int', -1)
-cmd_args.add('model_id', 'str', None)
-cmd_args.add('restore', 'str', None)
-cmd_args.add('results', 'str', '../results')
 
 _factory = None
 
@@ -34,33 +29,39 @@ def create_from_main(_clsname, **kwargs):
     return get_factory().create_from_main(_clsname, **kwargs)
 
 
+def gen_id(name):
+    return '{}-{}'.format(name, assign_model_id.get_id())
+
+_model_name_registry = {}
+
+
 class Model(GraphBuilder, OptionBase):
     """Tensorflow model abstract object."""
 
-    def __init__(self):
+    def __init__(self, name='model'):
         GraphBuilder.__init__(self)
         OptionBase.__init__(self)
         self._inp_var_dict = {}
         self._var_dict = {}
         self._loss = None
-        self._name = 'default'
-        self._id = self.gen_model_id()
-        self._restore = None
+        self._gpu = -1
+        counter = 1
+        _name = name
+        while _name in _model_name_registry:
+            _name = name + '_{:d}'.format(counter)
+        self._name = _name
+        self.log.info('Registering model name "{}"'.format(_name))
+        self._ckpt_fname = None
         self._saver = None
-        self._results_folder = None
-        self._restore_step = 0
-        self.register_option('gpu')
-        self.register_option('model_id')
-        self.register_option('restore')
-        self.register_option('results')
         pass
 
-    def gen_model_id(self):
-        return '{}-{}'.format(self.name, assign_model_id.get_id())
-
     @property
-    def id(self):
-        return self._id
+    def gpu(self):
+        return self._gpu
+
+    def set_gpu(self, value):
+        self._gpu = value
+        return self
 
     @property
     def name(self):
@@ -68,18 +69,27 @@ class Model(GraphBuilder, OptionBase):
 
     @property
     def folder(self):
-        return os.path.join(self._results_folder, self._id)
+        return self._folder
+
+    def set_folder(self, value):
+        self._folder = value
+
+    def get_folder(self):
+        return self._folder
+
+    @property
+    def device(self):
+        if self.gpu > 0:
+            return '/gpu:{}'.format(self.gpu)
+        else:
+            return '/cpu:0'
 
     def get_name(self):
         return self._name
 
     def set_name(self, value):
         self._name = value
-        self._id = self.gen_model_id()
         return self
-
-    def get_description(self):
-        return 'Model'
 
     def get_cpu_list(self):
         return ['ResizeBilinear', 'ResizeBilinearGrad', 'Mod', 'CumMin',
@@ -95,92 +105,33 @@ class Model(GraphBuilder, OptionBase):
                 return "/cpu:0"
             else:
                 # Other ops will be placed on GPU if available, otherwise CPU.
-                return self._device
+                return self.device
         return _device_fn
 
-    def _restore_from(self, folder):
-        """Sets all basic info of restoration."""
-        saver = Saver(folder)
-        info = saver.get_ckpt_info()
-        self._id = info['model_id']
-        self._restore = folder
-        self._ckpt_fname = info['ckpt_fname']
-        self._restore_step = info['step']
-        pass
-
-    def restore_from(self, folder):
-        """Restore a model for non-commandline usage.
-
-        Args:
-            folder: folder where the model is stored.
-        """
-        self._restore_from(folder)
-        self.set_all_options(self.read_options(self.folder, 'model'))
-        pass
-
     def restore_options_from(self, folder):
-        """Restore all model options, not the weights."""
-        self.set_all_options(self.read_options(self.folder, 'model'))
-        pass
+        """Restore all model options, not the weights.
+        WARNING: Call only before built the graph.
+        """
+        if folder is not None:
+            self.set_all_options(self.read_options(folder, self.name))
+        return self
 
-    @property
-    def restore_step(self):
-        return self._restore_step
-
-    @property
-    def results_folder(self):
-        return self._results_folder
+    def restore_weights_from(self, sess, folder):
+        """Restore all model options, not the weights.
+        WARNING: Call only after built the graph.
+        """
+        if folder is not None:
+            Saver(folder, var_dict=self.get_save_var_dict(),
+                  fname=self.name).restore(sess)
+        return self
 
     @property
     def saver(self):
         if self._saver is None:
-            self._saver = Saver(self.folder, self.get_restore_var_dict())
+            self._saver = Saver(self.folder,
+                                var_dict=self.get_save_var_dict(),
+                                fname=self.name)
         return self._saver
-    
-
-    def parse_opt(self):
-        """Parse the options from command line. Handles restoring logic."""
-        opt = OptionBase.parse_opt(self)
-
-        if opt['gpu'] > 0:
-            self._device = '/gpu:{}'.format(opt['gpu'])
-        else:
-            self._device = '/cpu:0'
-
-        # Output folder.
-        if opt['results'] is not None:
-            self._results_folder = opt['results']
-            pass
-
-        # Use previously stored model options.
-        if opt['restore'] is not None:
-            self._restore_from(opt['restore'])
-            opt = self.read_options(self.folder, 'model')
-            pass
-        elif opt['model_id'] is not None:
-            self._id = opt['model_id']
-            pass
-
-        # Remove experiment-ralted options.
-        for name in ['gpu', 'model_id', 'restore', 'results']:
-            if name in opt:
-                del opt[name]
-                pass
-            pass
-        self.log.info('Model options: {}'.format(opt))
-        return opt
-
-    def init(self, sess):
-        """Initialize model.
-
-        Args:
-            sess: tensorflow session
-        """
-        sess.run(tf.initialize_all_variables())
-        if self._restore is not None:
-            self.saver.restore(sess, self._ckpt_fname)
-            pass
-        return self
 
     def save(self, sess, step=0):
         """Save model.
@@ -189,7 +140,7 @@ class Model(GraphBuilder, OptionBase):
             sess: tensorflow session
             step: number of steps
         """
-        self.save_options(self.folder, 'model')
+        self.save_options(self.folder, self.name)
         self.saver.save(sess, global_step=step)
         pass
 
@@ -298,7 +249,41 @@ class Model(GraphBuilder, OptionBase):
             self.build_loss_grad(inp_var, output_var)
         return self
 
-    def get_restore_var_dict(self):
+    def add_prefix_to(self, prefix, from_, to):
+        for key in from_.iterkeys():
+            to[prefix + '/' + key] = from_[key]
+
+    def get_save_var_dict(self):
         """Get a dictionary of variables to restore."""
         raise Exception('Not implemented')
     pass
+
+
+class ContainerModel(Model):
+
+    def __init__(self, name='model'):
+        super(ContainerModel, self).__init__(name=name)
+        self.sub_models = []
+        pass
+
+    def add_sub_model(self, m):
+        self.sub_models.add(m)
+        pass
+
+    def save(self):
+        for m in self.sub_models:
+            m.save()
+            pass
+        return super(ContainerModel, self).save()
+
+    def save_options(self):
+        for m in self.sub_models:
+            m.save_options()
+            pass
+        return super(ContainerModel, self).save_options()
+
+    def restore_options_from(self, folder):
+        for m in self.sub_models:
+            m.restore_options_from(folder)
+            pass
+        return super(ContainerModel, self).restore_from(folder)

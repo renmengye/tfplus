@@ -31,10 +31,6 @@ class BatchNorm(GraphBuilder):
             self.gamma = self.declare_var(
                 [self.n_out], init_val=self.init_gamma, name='gamma',
                 trainable=trainable)
-
-            # phase_train_f = tf.to_float(phase_train)
-            # _decay = 1 - (1 - decay) * phase_train_f
-            # _decay = decay
             self.ema = tf.train.ExponentialMovingAverage(decay=self.decay)
             pass
         pass

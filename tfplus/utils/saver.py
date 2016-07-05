@@ -9,13 +9,14 @@ kMaxToKeep = 2
 
 class Saver():
 
-    def __init__(self, folder, var_dict=None):
+    def __init__(self, folder, fname='model', var_dict=None):
 
         if not os.path.exists(folder):
             os.makedirs(folder)
 
         self.folder = folder
         self.log = logger.get()
+        self.fname = fname
         self.tf_saver = None
         if var_dict is None:
             self.var_dict = tf.all_variables()
@@ -32,7 +33,7 @@ class Saver():
         if self.tf_saver is None:
             self.tf_saver = tf.train.Saver(
                 self.var_dict, max_to_keep=kMaxToKeep)
-        ckpt_path = os.path.join(self.folder, 'model.ckpt')
+        ckpt_path = os.path.join(self.folder, self.fname + '.ckpt')
         self.log.info('Saving checkpoint to {}'.format(ckpt_path))
         self.tf_saver.save(sess, ckpt_path, global_step=global_step)
         pass
@@ -40,10 +41,12 @@ class Saver():
     def get_latest_ckpt(self):
         """Get the latest checkpoint filename in a folder."""
 
-        ckpt_fname_pattern = os.path.join(self.folder, 'model.ckpt-*')
+        ckpt_fname_pattern = os.path.join(self.folder, self.fname + '.ckpt-*')
+        print ckpt_fname_pattern
+        print os.listdir(self.folder)
         ckpt_fname_list = []
-        for fname in os.listdir(self.folder):
-            fullname = os.path.join(self.folder, fname)
+        for fn in os.listdir(self.folder):
+            fullname = os.path.join(self.folder, fn)
             if fnmatch.fnmatch(fullname, ckpt_fname_pattern):
                 if not fullname.endswith('.meta'):
                     ckpt_fname_list.append(fullname)
@@ -53,9 +56,9 @@ class Saver():
         latest_step = max(ckpt_fname_step)
 
         latest_ckpt = os.path.join(self.folder,
-                                   'model.ckpt-{}'.format(latest_step))
+                                   self.fname + '.ckpt-{}'.format(latest_step))
         latest_graph = os.path.join(self.folder,
-                                    'model.ckpt-{}.meta'.format(latest_step))
+                                    self.fname + '.ckpt-{}.meta'.format(latest_step))
         return (latest_ckpt, latest_graph, latest_step)
 
     def get_ckpt_info(self):
