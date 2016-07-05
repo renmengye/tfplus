@@ -134,7 +134,8 @@ class DCNN(GraphBuilder):
                                                init_beta=init_beta,
                                                init_gamma=init_gamma)
 
-                        h[ii] = batch_norm(h[ii])
+                        h[ii] = batch_norm(
+                            {'input': h[ii], 'phase_train': phase_train})
 
                     if self.act[ii] is not None:
                         h[ii] = self.act[ii](h[ii])
@@ -143,4 +144,3 @@ class DCNN(GraphBuilder):
         self.hidden_layers = h
         return h[-1]
     pass
-
