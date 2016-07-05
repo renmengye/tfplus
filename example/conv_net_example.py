@@ -3,6 +3,8 @@ Train a simple ConvNet on MNIST.
 Usage: python conv_net_example.py --help
 """
 
+import cslab_environ
+
 import numpy as np
 import tensorflow as tf
 import tfplus
