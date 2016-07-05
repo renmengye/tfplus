@@ -243,6 +243,8 @@ class Model(GraphBuilder, OptionBase):
         """Get loss variable."""
         if self._loss is None:
             self._loss = tf.add_n(tf.get_collection('losses'), name='loss')
+        else:
+            self.log.fatal("Calling get_loss twice")
         return self._loss
 
     def add_loss(self, var):
@@ -282,8 +284,9 @@ class Model(GraphBuilder, OptionBase):
 
     def build_all(self):
         """Build all nodes."""
-        inp_var = self.build_input()
-        output_var = self.build(inp_var)
-        self.build_loss_grad(inp_var, output_var)
+        with tf.device(self.get_device_fn()):
+            inp_var = self.build_input()
+            output_var = self.build(inp_var)
+            self.build_loss_grad(inp_var, output_var)
         return self
     pass

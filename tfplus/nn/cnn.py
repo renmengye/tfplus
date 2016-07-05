@@ -9,7 +9,7 @@ from batch_norm import BatchNorm
 class CNN(GraphBuilder):
 
     def __init__(self, f, ch, pool, act, use_bn, wd=None,
-                 scope='cnn', init_weights=None, frozen=None, 
+                 scope='cnn', init_weights=None, frozen=None,
                  shared_weights=None):
         """Add CNN. N = number of layers.
 
@@ -36,9 +36,9 @@ class CNN(GraphBuilder):
         self.w = [None] * self.nlayers
         self.b = [None] * self.nlayers
         self.num_copies = 0
-        
+
         super(CNN, self).__init__()
-        
+
         self.log.info('CNN: {}'.format(scope))
         self.log.info('Channels: {}'.format(ch))
         self.log.info('Activation: {}'.format(act))
@@ -46,7 +46,6 @@ class CNN(GraphBuilder):
         self.log.info('BN: {}'.format(use_bn))
         self.log.info('Shared weights: {}'.format(shared_weights))
         pass
-
 
     def init_var(self):
         """Initialize variables."""
@@ -140,12 +139,11 @@ class CNN(GraphBuilder):
                             init_beta = None
                             init_gamma = None
 
-                        batch_norm = BatchNorm(out_ch, phase_train,
-                            scope2='{}_{}_{}'.format(
-                                self.scope, ii, self.num_copies),
-                            init_beta=init_beta,
-                            init_gamma=init_gamma)
-                        h[ii] = batch_norm(h[ii])
+                        batch_norm = BatchNorm(out_ch,
+                                               init_beta=init_beta,
+                                               init_gamma=init_gamma)
+                        h[ii] = batch_norm(
+                            {'input': h[ii], 'phase_train': phase_train })
 
                     if self.act[ii] is not None:
                         h[ii] = self.act[ii](h[ii])
