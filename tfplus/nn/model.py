@@ -308,11 +308,10 @@ class ContainerModel(Model):
         for m in self.sub_models:
             m.init_from_main()
             pass
-        super(ContainerModel, self).init_from_main()
-        pass
-
+        return super(ContainerModel, self).init_from_main()
+        
     def add_sub_model(self, m):
-        self.sub_models.add(m)
+        self.sub_models.append(m)
         pass
 
     def set_gpu(self, value):

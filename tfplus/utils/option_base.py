@@ -8,6 +8,10 @@ class OptionBase(object):
         self._opt = {}
         self._default_opt = {}
         self._opt_names = set()
+        self.init_default_options()
+        pass
+
+    def init_default_options(self):
         pass
 
     def set_option(self, name, value):
