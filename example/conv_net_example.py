@@ -12,6 +12,7 @@ import tfplus
 import tfplus.data.mnist
 
 tfplus.init('Train a simple ConvNet on MNIST')
+
 # Main options
 tfplus.cmd_args.add('gpu', 'int', -1)
 tfplus.cmd_args.add('results', 'str', '../results')
@@ -139,29 +140,24 @@ tfplus.nn.model.register('conv_net_example', ConvNetExampleModel)
 if __name__ == '__main__':
     opt = tfplus.cmd_args.make()
 
-    # Initialize logging.
+    # Initialize logging/saving folder.
     uid = tfplus.nn.model.gen_id('conv_net_ex')
     logs_folder = os.path.join(opt['logs'], uid)
     log = tfplus.utils.logger.get(os.path.join(logs_folder, 'raw'))
     tfplus.utils.LogManager(logs_folder).register('raw', 'plain', 'Raw Logs')
+    results_folder = os.path.join(opt['results'], uid)
 
     # Initialize session.
     sess = tf.Session()
 
     # Initialize model.
     model = (tfplus.nn.model.create_from_main('conv_net_example')
-             .set_name('conv_net_ex')
-             .set_gpu(opt['gpu']))
-    results_folder = os.path.join(opt['results'], uid)
-    model.set_folder(results_folder)
-
-    # Restore with model options.
-    model.restore_options_from(opt['restore_model'])
-    model.build_all()
-
-    # Initialize variables (including restored weights).
-    sess.run(tf.initialize_all_variables())
-    model.restore_weights_from(sess, opt['restore_model'])
+             .set_gpu(opt['gpu'])
+             .set_folder(results_folder)
+             .restore_options_from(opt['restore_model'])
+             .build_all()
+             .init(sess)
+             .restore_weights_from(sess, opt['restore_model']))
 
     # Initialize data.
     data = {}

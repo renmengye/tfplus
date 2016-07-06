@@ -53,6 +53,9 @@ class Model(GraphBuilder, OptionBase):
         self.log.info('Registering model name "{}"'.format(_name))
         self._ckpt_fname = None
         self._saver = None
+        self._has_init = False
+        self._has_built_all = False
+        self._folder = None
         pass
 
     @property
@@ -73,6 +76,7 @@ class Model(GraphBuilder, OptionBase):
 
     def set_folder(self, value):
         self._folder = value
+        return self
 
     def get_folder(self):
         return self._folder
@@ -88,8 +92,18 @@ class Model(GraphBuilder, OptionBase):
         return self._name
 
     def set_name(self, value):
+        if self.has_init:
+            raise Exception('Cannot change name after initialization')
         self._name = value
         return self
+
+    @property
+    def has_init(self):
+        return self._has_init
+
+    @property
+    def has_built_all(self):
+        return self._has_built_all
 
     def get_cpu_list(self):
         return ['ResizeBilinear', 'ResizeBilinearGrad', 'Mod', 'CumMin',
@@ -127,6 +141,8 @@ class Model(GraphBuilder, OptionBase):
 
     @property
     def saver(self):
+        if self.folder is None:
+            raise Exception('Has not set save folder yet')
         if self._saver is None:
             self._saver = Saver(self.folder,
                                 var_dict=self.get_save_var_dict(),
@@ -140,8 +156,16 @@ class Model(GraphBuilder, OptionBase):
             sess: tensorflow session
             step: number of steps
         """
-        self.save_options(self.folder, self.name)
+        if self.folder is None:
+            raise Exception('Has not set save folder yet')
+        self.save_model_options()
         self.saver.save(sess, global_step=step)
+        pass
+
+    def save_model_options(self):
+        if self.folder is None:
+            raise Exception('Has not set save folder yet')
+        self.save_options(self.folder, self.name)
         pass
 
     def has_input_var(self, name):
@@ -243,10 +267,24 @@ class Model(GraphBuilder, OptionBase):
 
     def build_all(self):
         """Build all nodes."""
+        self._has_built_all = True
         with tf.device(self.get_device_fn()):
-            inp_var = self.build_input()
-            output_var = self.build(inp_var)
-            self.build_loss_grad(inp_var, output_var)
+            with tf.variable_scope(self.name):
+                inp_var = self.build_input()
+                output_var = self.build(inp_var)
+                self.build_loss_grad(inp_var, output_var)
+        return self
+
+    def init(self, sess):
+        if not self.has_built_all:
+            raise Exception('Need to call build_all() before init()')
+        self._has_init = True
+        var_list = tf.all_variables()
+        my_var_list = []
+        for v in var_list:
+            if v.name.startswith(self.name):
+                my_var_list.append(v)
+        sess.run(tf.initialize_variables(my_var_list))
         return self
 
     def add_prefix_to(self, prefix, from_, to):
@@ -270,20 +308,39 @@ class ContainerModel(Model):
         self.sub_models.add(m)
         pass
 
+    def set_gpu(self, value):
+        # For now all device is single.
+        for m in self.sub_models:
+            m.set_gpu(value)
+            pass
+        return super(ContainerModel, self).set_gpu(value)
+
+    def set_folder(self, value):
+        for m in self.sub_models:
+            m.set_folder(value):
+            pass
+        return super(ContainerModel, self).set_folder(value)
+
     def save(self):
         for m in self.sub_models:
             m.save()
             pass
         return super(ContainerModel, self).save()
 
-    def save_options(self):
+    def save_model_options(self):
         for m in self.sub_models:
-            m.save_options()
+            m.save_model_options()
             pass
-        return super(ContainerModel, self).save_options()
+        return super(ContainerModel, self).save_model_options()
 
     def restore_options_from(self, folder):
         for m in self.sub_models:
             m.restore_options_from(folder)
             pass
-        return super(ContainerModel, self).restore_from(folder)
+        return super(ContainerModel, self).restore_options_from(folder)
+
+    def restore_weights_from(self, sess, folder):
+        for m in self.sub_models:
+            m.restore_weights_from(sess, folder)
+            pass
+        return super(ContainerModel, self).restore_weights_from(sess, folder)
