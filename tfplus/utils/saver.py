@@ -42,8 +42,6 @@ class Saver():
         """Get the latest checkpoint filename in a folder."""
 
         ckpt_fname_pattern = os.path.join(self.folder, self.fname + '.ckpt-*')
-        print ckpt_fname_pattern
-        print os.listdir(self.folder)
         ckpt_fname_list = []
         for fn in os.listdir(self.folder):
             fullname = os.path.join(self.folder, fn)
