@@ -304,6 +304,13 @@ class ContainerModel(Model):
         self.sub_models = []
         pass
 
+    def init_from_main(self):
+        for m in self.sub_models:
+            m.init_from_main()
+            pass
+        super(ContainerModel, self).init_from_main()
+        pass
+
     def add_sub_model(self, m):
         self.sub_models.add(m)
         pass
@@ -317,7 +324,7 @@ class ContainerModel(Model):
 
     def set_folder(self, value):
         for m in self.sub_models:
-            m.set_folder(value):
+            m.set_folder(value)
             pass
         return super(ContainerModel, self).set_folder(value)
 
