@@ -132,7 +132,9 @@ class TrainExperiment(Experiment):
     def add_runner(self, runner):
         self.runners[runner.name] = runner
         runner.set_session(self.session).set_model(
-            self.model).set_experiment(self).set_preprocessor(self.preprocessor)
+            self.model).set_experiment(self)
+        if hasattr(runner, 'preprocessor'):
+            runner.set_preprocessor(self.preprocessor)
         return self
 
     def add_csv_output(self, name, labels):
