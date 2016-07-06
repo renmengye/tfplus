@@ -327,11 +327,11 @@ class ContainerModel(Model):
             pass
         return super(ContainerModel, self).set_folder(value)
 
-    def save(self):
+    def save(self, sess, step=0):
         for m in self.sub_models:
-            m.save()
+            m.save(sess, step=step)
             pass
-        return super(ContainerModel, self).save()
+        return super(ContainerModel, self).save(sess, step=step)
 
     def save_model_options(self):
         for m in self.sub_models:
