@@ -99,6 +99,7 @@ class TrainExperiment(Experiment):
         self._logs_folder = '../logs'
         self._localhost = 'http://localhost'
         self.ts_loggers = {}
+        self._preprocessor = lambda x: x
         pass
 
     @property
@@ -120,10 +121,17 @@ class TrainExperiment(Experiment):
         self._localhost = value
         return self
 
+    @property
+    def preprocessor(self):
+        return self._preprocessor
+
+    def set_preprocessor(self, value):
+        self._preprocessor = value
+
     def add_runner(self, runner):
         self.runners[runner.name] = runner
         runner.set_session(self.session).set_model(
-            self.model).set_experiment(self)
+            self.model).set_experiment(self).set_preprocessor(self.preprocessor)
         return self
 
     def add_csv_output(self, name, labels):
