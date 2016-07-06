@@ -289,7 +289,11 @@ class Model(GraphBuilder, OptionBase):
 
     def add_prefix_to(self, prefix, from_, to):
         for key in from_.iterkeys():
-            to[prefix + '/' + key] = from_[key]
+            if prefix is not None:
+                newkey = prefix + '/' + key
+            else:
+                newkey = key
+            to[newkey] = from_[key]
 
     def get_save_var_dict(self):
         """Get a dictionary of variables to restore."""
