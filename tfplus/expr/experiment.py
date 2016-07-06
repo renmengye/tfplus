@@ -127,6 +127,7 @@ class TrainExperiment(Experiment):
 
     def set_preprocessor(self, value):
         self._preprocessor = value
+        return self
 
     def add_runner(self, runner):
         self.runners[runner.name] = runner
