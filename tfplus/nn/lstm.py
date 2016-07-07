@@ -71,7 +71,7 @@ class LSTM(GraphBuilder):
                 [self.inp_dim, self.hid_dim], init_val=self.init_w['w_xo'],
                 wd=self.wd, name='w_xo', trainable=trainable)
             self.w_ho = self.declare_var(
-                [self.hid_dim, self.hid_dim], 
+                [self.hid_dim, self.hid_dim],
                 init_val=self.init_w['w_ho'],
                 wd=self.wd, name='w_ho', trainable=trainable)
             self.b_o = self.declare_var(
@@ -109,4 +109,16 @@ class LSTM(GraphBuilder):
             state = tf.concat(1, [c, h])
 
         return {'state': state}
+
+    def get_save_var_dict(self):
+        results = {}
+        for name, w in zip(
+            ['w_xi', 'w_hi', 'b_i', 'w_xf', 'w_hf', 'b_f', 'w_xu',
+             'w_hu', 'b_u', 'w_xo', 'w_ho', 'b_o'],
+            [self.w_xi, self.w_hi, self.b_i, self.w_xf, self.w_hf,
+             self.b_f, self.w_xu, self.w_hu, self.b_u, self.w_xo, w_ho, 
+             self.b_o]):
+            results[name] = w
+            pass
+        return results
     pass
