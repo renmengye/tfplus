@@ -58,7 +58,7 @@ class VideoPlotter(ThumbnailPlotter):
                 ax.text(0, -0.5, '[{:.2g}, {:.2g}]'.format(x.min(), x.max()),
                         color=(0, 0, 0), size=8)
 
-        plt.tight_layout(pad=2.0, w_pad=0.0, h_pad=0.0)
+        plt.tight_layout(pad=1.0, w_pad=0.0, h_pad=0.0)
         plt.savefig(self.filename, dpi=150)
         plt.close('all')
         self.register()
