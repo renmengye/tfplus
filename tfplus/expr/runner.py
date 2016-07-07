@@ -165,17 +165,30 @@ class BasicRunner(SessionRunner):
         return self
 
     def add_csv_listener(self, name, var_name, label=None):
+        if var_name not in self.outputs and var_name != 'step_time':
+            raise Exception(
+                'Runner "{}": variable "{}" is not in output list.'.format(
+                    self.name, var_name))
         self.listeners.append(listener.get_factory().create(
             'csv', name=name, var_name=var_name, label=label))
         return self
 
     def add_plot_listener(self, name, mapping):
+        for var_name in mapping.iterkeys():
+            if var_name not in self.outputs and var_name != 'step_time':
+                raise Exception(
+                    'Runner "{}": variable "{}" is not in output list.'.format(
+                        self.name, var_name))
         self.listeners.append(listener.AdapterListener(
             mapping=mapping,
             listener=plotter.get(name)))
         return self
 
     def add_cmd_listener(self, name, var_name):
+        if var_name not in self.outputs and var_name != 'step_time':
+            raise Exception(
+                'Runner "{}": variable "{}" is not in output list.'.format(
+                    self.name, var_name))
         self.listeners.append(listener.get_factory().create(
             'cmd', name=name, var_name=var_name))
         return self

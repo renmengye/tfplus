@@ -1,11 +1,14 @@
-from plotter import ThumbnailPlotter, get_factory
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
+from plotter import ThumbnailPlotter, get_factory
 
 class VideoPlotter(ThumbnailPlotter):
 
     def __init__(self, filename=None, name=None, cmap='Greys', max_num_frame=9,
                  max_num_col=9):
-        super(ThumbnailMultiRowPlotter, self).__init__(
+        super(VideoPlotter, self).__init__(
             filename=filename, name=name, cmap=cmap, max_num_col=max_num_col)
         self.max_num_frame = max_num_frame
         pass
@@ -43,13 +46,15 @@ class VideoPlotter(ThumbnailPlotter):
                     x = img[ii, jj]
                 else:
                     raise Exception('Axis not supported')
-                if num_col > 1:
+                if num_col > 1 and num_row > 1:
                     ax = axarr[row, col]
-                else:
+                elif num_row > 1:
                     ax = axarr[row]
+                elif num_col > 1:
+                    ax = axarr[col]
                 if x.shape[-1] == 3:
                     x = x[:, :, [2, 1, 0]]
-                ax.imshow(x, cmap=cmap)
+                ax.imshow(x, cmap=self.cmap)
                 ax.text(0, -0.5, '[{:.2g}, {:.2g}]'.format(x.min(), x.max()),
                         color=(0, 0, 0), size=8)
 

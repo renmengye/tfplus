@@ -89,10 +89,12 @@ class ThumbnailPlotter(Plotter):
         for ii in xrange(num_items):
             row, col = calc(0, ii)
             x = img[ii]
-            if num_col > 1:
+            if num_col > 1 and num_row > 1:
                 ax = axarr[row, col]
-            else:
+            elif num_row > 1:
                 ax = axarr[row]
+            elif num_col > 1:
+                ax = axarr[col]
             if x.shape[-1] == 3:
                 x = x[:, :, [2, 1, 0]]
             elif x.shape[-1] == 1:
@@ -127,10 +129,12 @@ class ThumbnailPlotter(Plotter):
     def set_axis_off(self, axarr, num_row, num_col):
         for row in xrange(num_row):
             for col in xrange(num_col):
-                if num_col > 1:
+                if num_col > 1 and num_row > 1:
                     ax = axarr[row, col]
-                else:
+                elif num_row > 1:
                     ax = axarr[row]
+                elif num_col > 1:
+                    ax = axarr[col]
                 ax.set_axis_off()
         pass
 
