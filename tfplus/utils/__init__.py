@@ -7,5 +7,6 @@ from grad_clip_optim import GradientClipOptimizer
 from listener import Listener, AdapterListener
 from csv_listener import CSVListener
 from cmd_listener import CmdListener
-from plotter import ThumbnailPlotter
+from plotter import Plotter, ThumbnailPlotter
+from video_plotter import VideoPlotter
 from log_manager import LogManager
