@@ -287,14 +287,6 @@ class Model(GraphBuilder, OptionBase):
         sess.run(tf.initialize_variables(my_var_list))
         return self
 
-    def add_prefix_to(self, prefix, from_, to):
-        for key in from_.iterkeys():
-            if prefix is not None:
-                newkey = prefix + '/' + key
-            else:
-                newkey = key
-            to[newkey] = from_[key]
-
     def get_save_var_dict(self):
         """Get a dictionary of variables to restore."""
         raise Exception('Not implemented')

@@ -73,6 +73,17 @@ class GraphBuilder(object):
             return inp['x']
         else:
             return inp
+
+    def add_prefix_to(self, prefix, from_, to):
+        for key in from_.iterkeys():
+            if prefix is not None:
+                newkey = prefix + '/' + key
+            else:
+                newkey = key
+            to[newkey] = from_[key]
+            pass
+        return to
+
     pass
 
 if __name__ == '__main__':
