@@ -116,7 +116,7 @@ class LSTM(GraphBuilder):
             ['w_xi', 'w_hi', 'b_i', 'w_xf', 'w_hf', 'b_f', 'w_xu',
              'w_hu', 'b_u', 'w_xo', 'w_ho', 'b_o'],
             [self.w_xi, self.w_hi, self.b_i, self.w_xf, self.w_hf,
-             self.b_f, self.w_xu, self.w_hu, self.b_u, self.w_xo, w_ho, 
+             self.b_f, self.w_xu, self.w_hu, self.b_u, self.w_xo, self.w_ho, 
              self.b_o]):
             results[name] = w
             pass
