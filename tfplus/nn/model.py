@@ -191,8 +191,10 @@ class Model(GraphBuilder, OptionBase):
         if self.folder is None:
             raise Exception('Has not set save folder yet')
         self.save_model_options()
-        self.saver.save(sess, global_step=step)
-        self.aux_saver.save(sess, global_step=step)
+        if self.saver is not None:
+            self.saver.save(sess, global_step=step)
+        if self.aux_saver is not None:
+            self.aux_saver.save(sess, global_step=step)
         pass
 
     def save_model_options(self):
