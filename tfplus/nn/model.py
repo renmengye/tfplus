@@ -53,6 +53,7 @@ class Model(GraphBuilder, OptionBase):
         self.log.info('Registering model name "{}"'.format(_name))
         self._ckpt_fname = None
         self._saver = None
+        self._aux_saver = None
         self._has_init = False
         self._has_built_all = False
         self._folder = None
@@ -131,12 +132,26 @@ class Model(GraphBuilder, OptionBase):
         return self
 
     def restore_weights_from(self, sess, folder):
-        """Restore all model options, not the weights.
+        """Restore the weights.
         WARNING: Call only after built the graph.
         """
         if folder is not None:
             Saver(folder, var_dict=self.get_save_var_dict(),
                   fname=self.name).restore(sess)
+        return self
+
+    def restore_aux_from(self, sess, folder):
+        """Restore the aux weights.
+        WARNING: Call only after built the graph.
+        """
+        if folder is not None:
+            Saver(folder, var_dict=self.get_aux_var_dict(),
+                  fname=self.name + '.aux').restore(sess)
+        return self
+
+    def restore_weights_aux_from(self, sess, folder):
+        self.restore_weights_from(sess, folder)
+        self.restore_aux_from(sess, folder)
         return self
 
     @property
@@ -149,6 +164,16 @@ class Model(GraphBuilder, OptionBase):
                                 fname=self.name)
         return self._saver
 
+    @property
+    def aux_saver(self):
+        if self.folder is None:
+            raise Exception('Has not set save folder yet')
+        if self._aux_saver is None:
+            self._aux_saver = Saver(self.folder,
+                                    var_dict=self.get_aux_var_dict(),
+                                    fname=self.name + '.aux')
+        return self._aux_saver
+
     def save(self, sess, step=0):
         """Save model.
 
@@ -160,6 +185,7 @@ class Model(GraphBuilder, OptionBase):
             raise Exception('Has not set save folder yet')
         self.save_model_options()
         self.saver.save(sess, global_step=step)
+        self.aux_saver.save(sess, global_step=step)
         pass
 
     def save_model_options(self):
@@ -253,11 +279,19 @@ class Model(GraphBuilder, OptionBase):
         """
         raise Exception('Not implemented')
 
-    def build_loss_grad(self, inp, output):
+    def build_loss(self, inp, output):
         """Build gradient graph. To be implemented by subclasses.
 
         """
         raise Exception('Not implemented')
+
+    def build_optim(self, loss):
+        raise Exception('Not implemented')
+
+    def build_global_step(self):
+        self.global_step = tf.Variable(0.0)
+        self.register_var('step', self.global_step)
+        return self.global_step
 
     def build_eval(self):
         """Build nodes for evaluation/inference."""
@@ -272,24 +306,45 @@ class Model(GraphBuilder, OptionBase):
             with tf.variable_scope(self.name):
                 inp_var = self.build_input()
                 output_var = self.build(inp_var)
-                self.build_loss_grad(inp_var, output_var)
+                loss_var = self.build_loss(inp_var, output_var)
+                self.build_global_step()
+                train_step = self.build_optim(loss_var)
+                self.register_var('train_step', train_step)
         return self
 
     def init(self, sess):
         if not self.has_built_all:
             raise Exception('Need to call build_all() before init()')
         self._has_init = True
+        my_var_list = self.get_all_vars()
+        sess.run(tf.initialize_variables(my_var_list))
+        return self
+
+    def get_all_vars(self):
         var_list = tf.all_variables()
         my_var_list = []
         for v in var_list:
             if v.name.startswith(self.name):
                 my_var_list.append(v)
-        sess.run(tf.initialize_variables(my_var_list))
-        return self
+                pass
+            pass
+        return my_var_list
 
     def get_save_var_dict(self):
         """Get a dictionary of variables to restore."""
         raise Exception('Not implemented')
+
+    def get_aux_var_dict(self):
+        all_vars = self.get_all_vars()
+        save_vars = self.get_save_var_dict()
+        save_var_set = set(save_vars.values())
+        aux_vars = {}
+        for v in all_vars:
+            if v not in save_var_set:
+                aux_vars[v.name] = v
+                pass
+            pass
+        return aux_vars
     pass
 
 
@@ -305,7 +360,7 @@ class ContainerModel(Model):
             m.init_from_main()
             pass
         return super(ContainerModel, self).init_from_main()
-        
+
     def add_sub_model(self, m):
         self.sub_models.append(m)
         pass
@@ -346,3 +401,16 @@ class ContainerModel(Model):
             m.restore_weights_from(sess, folder)
             pass
         return super(ContainerModel, self).restore_weights_from(sess, folder)
+
+    def restore_aux_from(self, sess, folder):
+        for m in self.sub_models:
+            m.restore_aux_from(sess, folder)
+            pass
+        return super(ContainerModel, self).restore_aux_from(sess, folder)
+
+    def restore_weights_aux_from(self, sess, folder):
+        for m in self.sub_models:
+            m.restore_weights_aux_from(sess, folder)
+            pass
+        return super(ContainerModel, self).restore_weights_aux_from(
+            sess, folder)

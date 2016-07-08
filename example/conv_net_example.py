@@ -101,27 +101,28 @@ class ConvNetExampleModel(tfplus.nn.Model):
             'y_out': y_out
         }
 
-    def build_loss_grad(self, inp, output):
+    def build_loss(self, inp, output):
         y_gt = inp['y_gt']
         y_out = output['y_out']
         ce = tfplus.nn.CE()({'y_gt': y_gt, 'y_out': y_out})
         num_ex_f = tf.to_float(tf.shape(inp['x'])[0])
         ce = tf.reduce_sum(ce) / num_ex_f
         self.add_loss(ce)
-        learn_rate = self.get_option('learn_rate')
         total_loss = self.get_loss()
         self.register_var('loss', total_loss)
-        eps = self.get_option('adam_eps')
-        optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
-        global_step = tf.Variable(0.0)
-        self.register_var('step', global_step)
-        train_step = optimizer.minimize(
-            total_loss, global_step=global_step)
-        self.register_var('train_step', train_step)
+
         correct = tf.equal(tf.argmax(y_gt, 1), tf.argmax(y_out, 1))
         acc = tf.reduce_sum(tf.to_float(correct)) / num_ex_f
         self.register_var('acc', acc)
-        pass
+
+        return total_loss
+
+    def build_optim(self, loss):
+        eps = self.get_option('adam_eps')
+        learn_rate = self.get_option('learn_rate')
+        optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
+        train_step = optimizer.minimize(loss, global_step=self.global_step)
+        return train_step
 
     def get_save_var_dict(self):
         results = {}
@@ -129,6 +130,13 @@ class ConvNetExampleModel(tfplus.nn.Model):
             results['step'] = self.get_var('step')
         self.add_prefix_to('cnn', self.cnn.get_save_var_dict(), results)
         self.add_prefix_to('mlp', self.mlp.get_save_var_dict(), results)
+        self.log.info('Save variable list:')
+        [self.log.info((v[0], v[1].name)) for v in results.items()]
+        return results
+
+    def get_aux_var_dict(self):
+        results = super(ConvNetExampleModel, self).get_aux_var_dict()
+        self.log.info('Aux variable list:')
         [self.log.info(v) for v in results.items()]
         return results
     pass
@@ -157,7 +165,7 @@ if __name__ == '__main__':
              .restore_options_from(opt['restore_model'])
              .build_all()
              .init(sess)
-             .restore_weights_from(sess, opt['restore_model']))
+             .restore_weights_aux_from(sess, opt['restore_model']))
 
     # Initialize data.
     data = {}
