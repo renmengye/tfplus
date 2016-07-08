@@ -138,7 +138,7 @@ class Model(GraphBuilder, OptionBase):
         if folder is not None:
             save_vars = self.get_save_var_dict()
             if len(save_vars) > 0:
-                Saver(folder, var_dict=self.get_save_var_dict(),
+                Saver(folder, var_dict=save_vars,
                       fname=self.name).restore(sess)
         return self
 
@@ -149,7 +149,7 @@ class Model(GraphBuilder, OptionBase):
         if folder is not None:
             aux_vars = self.get_aux_var_dict()
             if len(aux_vars) > 0:
-                Saver(folder, var_dict=self.get_aux_var_dict(),
+                Saver(folder, var_dict=aux_vars,
                       fname=self.name + '.aux').restore(sess)
         return self
 
@@ -174,7 +174,7 @@ class Model(GraphBuilder, OptionBase):
         if self.folder is None:
             raise Exception('Has not set save folder yet')
         if self._aux_saver is None:
-            aux_vars = get_aux_var_dict()
+            aux_vars = self.get_aux_var_dict()
             if len(aux_vars) > 0:
                 self._aux_saver = Saver(self.folder,
                                         var_dict=aux_vars,
