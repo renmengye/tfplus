@@ -114,7 +114,6 @@ class ConvNetExampleModel(tfplus.nn.Model):
         correct = tf.equal(tf.argmax(y_gt, 1), tf.argmax(y_out, 1))
         acc = tf.reduce_sum(tf.to_float(correct)) / num_ex_f
         self.register_var('acc', acc)
-
         return total_loss
 
     def build_optim(self, loss):
