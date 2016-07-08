@@ -11,13 +11,14 @@ import tensorflow as tf
 class ImageRandomTransform(GraphBuilder):
 
     def __init__(self, padding, rnd_vflip=True, rnd_hflip=True,
-                 rnd_transpose=True, rnd_size=False):
+                 rnd_transpose=True, rnd_size=False, _debug=False):
         super(ImageRandomTransform, self).__init__()
         self.padding = padding
         self.rnd_vflip = rnd_vflip
         self.rnd_hflip = rnd_hflip
         self.rnd_transpose = rnd_transpose
         self.rnd_size = rnd_size
+        self._debug = _debug
         pass
 
     def init_var(self):
@@ -27,7 +28,9 @@ class ImageRandomTransform(GraphBuilder):
             [1], 1.0 - float(self.rnd_transpose), 1.0)
         self.offset = tf.random_uniform(
             [2], dtype='int32', maxval=self.padding * 2)
-        self.offset = tf.Print(self.offset, ['Forward RND module', self.offset])
+        if self._debug:
+            self.offset = tf.Print(self.offset, ['Forward RND module', self.offset])
+        logger.get().fatal(self.offset)
         if self.rnd_size:
             self.space = 2 * self.padding - self.offset
             self.offset20 = tf.random_uniform(
