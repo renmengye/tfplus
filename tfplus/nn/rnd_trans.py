@@ -92,11 +92,11 @@ class ImageRandomTransform(GraphBuilder):
             x_rand = tf.slice(x_pad, tf.pack([0, 0, offset[0], offset[1]]),
                               tf.pack([-1, -1, inp_height + offset2[0],
                                        inp_width + offset2[1]]))
-            # if self.rnd_size:
-            #     x_rand = tf.transpose(x_rand, [0, 2, 3, 1])
-            #     x_rand = tf.image.resize_nearest_neighbor(
-            #         x_rand, tf.pack([inp_height, inp_width]))
-            #     x_rand = tf.transpose(x_rand, [0, 3, 1, 2])
+            if self.rnd_size:
+                x_rand = tf.transpose(x_rand, [0, 2, 3, 1])
+                x_rand = tf.image.resize_nearest_neighbor(
+                    x_rand, tf.pack([inp_height, inp_width]))
+                x_rand = tf.transpose(x_rand, [0, 3, 1, 2])
 
             x_ctr = tf.slice(x_pad, [0, 0, padding, padding],
                              tf.pack([-1, -1, inp_height, inp_width]))
