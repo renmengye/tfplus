@@ -29,7 +29,8 @@ class ImageRandomTransform(GraphBuilder):
         self.offset = tf.random_uniform(
             [2], dtype='int32', maxval=self.padding * 2)
         if self._debug:
-            self.offset = tf.Print(self.offset, ['Forward RND module', self.offset])
+            self.offset = tf.Print(self.offset,
+                                   ['Forward RND module', self.offset])
         if self.rnd_size:
             self.space = 2 * self.padding - self.offset
             self.offset20 = tf.random_uniform(
