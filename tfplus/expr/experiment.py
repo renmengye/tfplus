@@ -17,7 +17,6 @@ expr = experiment.get_factory().create_from_main('exp1')
 from __future__ import division
 
 import os
-import tensorflow as tf
 import sys
 
 from tfplus.utils import cmd_args, Factory, OptionBase, Saver, logger
