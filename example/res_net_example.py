@@ -1,5 +1,5 @@
 """
-Train a simple ResNet on CIFAR10.
+Train a simple ResNet on CIFAR-10.
 Usage: python res_net_example.py --help
 """
 
@@ -12,7 +12,7 @@ import tfplus
 import tfplus.data.mnist
 import tfplus.data.cifar10
 
-tfplus.init('Train a simple ResNet on CIFAR10')
+tfplus.init('Train a simple ResNet on CIFAR-10')
 
 # Main options
 tfplus.cmd_args.add('gpu', 'int', -1)
@@ -81,7 +81,7 @@ class ResNetExampleModel(tfplus.nn.Model):
 
         init_channel = channels[0]
         self.w1 = tf.Variable(tf.truncated_normal_initializer(
-            stddev=0.01)([7, 7, inp_depth, init_channel]), name='w1')
+            stddev=0.01)([3, 3, inp_depth, init_channel]), name='w1')
         self.b1 = tf.Variable(tf.truncated_normal_initializer(
             stddev=0.01)([init_channel]), name='b1')
         self.res_net = tfplus.nn.ResNet(layers=layers,
@@ -101,11 +101,11 @@ class ResNetExampleModel(tfplus.nn.Model):
         channels = self.get_option('channels')
         init_channel = channels[0]
 
-        h1 = tfplus.nn.Conv2D(self.w1, stride=2)(x) + self.b1
+        h1 = tfplus.nn.Conv2D(self.w1)(x) + self.b1
         bn1 = tfplus.nn.BatchNorm(init_channel)
         h1 = bn1({'input': h1, 'phase_train': phase_train})
         hn = self.res_net({'input': h1, 'phase_train': phase_train})
-        hn = tfplus.nn.AvgPool(4)(hn)
+        hn = tfplus.nn.AvgPool(8)(hn)
         cnn_dim = channels[-1]
         hn = tf.reshape(hn, [-1, cnn_dim])
         y_out = self.mlp({'input': hn, 'phase_train': phase_train})
