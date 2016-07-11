@@ -133,7 +133,9 @@ class ResNetExampleModel(tfplus.nn.Model):
         learn_rate = self.get_option('learn_rate')
         learn_rate = tf.train.exponential_decay(
             learn_rate, self.global_step, 25000, .1, staircase=True)
-        optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
+        self.register_var('learn_rate', learn_rate)
+        # optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
+        optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=0.9)
         train_step = optimizer.minimize(loss, global_step=self.global_step)
         return train_step
 
