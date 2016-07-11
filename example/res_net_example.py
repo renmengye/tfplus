@@ -131,6 +131,8 @@ class ResNetExampleModel(tfplus.nn.Model):
     def build_optim(self, loss):
         eps = self.get_option('adam_eps')
         learn_rate = self.get_option('learn_rate')
+        learn_rate = tf.train.exponential_decay(
+            learn_rate, self.global_step, 25000, .1, staircase=True)
         optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
         train_step = optimizer.minimize(loss, global_step=self.global_step)
         return train_step
@@ -195,6 +197,7 @@ if __name__ == '__main__':
      .add_csv_output('Loss', ['train'])
      .add_csv_output('Accuracy', ['train', 'valid'])
      .add_csv_output('Step Time', ['train'])
+     .add_csv_output('Learning Rate', ['train'])
      .add_plot_output('Input', 'thumbnail', max_num_col=5)
      .add_runner(
         tfplus.runner.create_from_main('average')
@@ -205,7 +208,7 @@ if __name__ == '__main__':
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_iter(data['train'].get_iter(batch_size=32, cycle=True))
+        .set_iter(data['train'].get_iter(batch_size=128, cycle=True))
         .set_phase_train(True)
         .set_num_batch(10)
         .set_interval(1))
@@ -216,10 +219,11 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('trainval')
-        .set_outputs(['acc'])
+        .set_outputs(['acc', 'learn_rate'])
         .add_csv_listener('Accuracy', 'acc', 'train')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['train'].get_iter(batch_size=32, cycle=True))
+        .add_csv_listener('Learning Rate', 'learn_rate', 'train')
+        .set_iter(data['train'].get_iter(batch_size=128, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -229,7 +233,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['valid'].get_iter(batch_size=32, cycle=True))
+        .set_iter(data['valid'].get_iter(batch_size=128, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -238,7 +242,7 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_id'])
         .add_plot_listener('Input', {'x_id': 'images'})
-        .set_iter(data['valid'].get_iter(batch_size=10, stagnant=True))
+        .set_iter(data['valid'].get_iter(batch_size=128, stagnant=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass

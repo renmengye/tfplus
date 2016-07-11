@@ -10,9 +10,19 @@ class ResNet(GraphBuilder):
     Each stage represents a different activation map size.
     Each layer represents a residual connection.
     Each unit represents a non-linear activation inside a layer.
+
+    Args:
+        layers: list of int. Number of layers in each stage.
+        channels: list of int. Number of channels in each stage.
+        strides: list of int. Sub-sample coefficient in each stage.
+        bottleneck: bool. Whether do 2 3x3 convs on each layer or 1x1, 3x3, 
+        1x1 convs on each layer.
+        dilation: Whether do subsample on strides (for classification), or do 
+        dilated convolution on strides (for segmentation)
+        scope: main scope name for all variables in this graph.
     """
 
-    def __init__(self, layers, bottleneck, channels, strides, scope='res_net'):
+    def __init__(self, layers, channels, strides, bottleneck=False, dilation=False, scope='res_net'):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
