@@ -30,6 +30,10 @@ tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9])
 tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2])
 tfplus.cmd_args.add('channels', 'list<int>', [16, 16, 32, 64])
 tfplus.cmd_args.add('bottleneck', 'bool', False)
+tfplus.cmd_args.add('learn_rate', 'float', 0.1)
+tfplus.cmd_args.add('learn_rate_decay', 'float', 0.1)
+tfplus.cmd_args.add('epochs_per_lr_decay', 'int', 80)
+tfplus.cmd_args.add('wd', 'float', 1e-4)
 
 
 class ResNetExampleModel(tfplus.nn.Model):
@@ -43,16 +47,13 @@ class ResNetExampleModel(tfplus.nn.Model):
         self.register_option('strides')
         self.register_option('channels')
         self.register_option('bottleneck')
-        pass
-
-    def init_default_options(self):
-        self.set_default_option('learn_rate', 1e-3)
-        self.set_default_option('adam_eps', 1e-7)
-        self.set_default_option('wd', None)
+        self.register_option('learn_rate')
+        self.register_option('learn_rate_decay')
+        self.register_option('epochs_per_lr_decay')
+        self.register_option('wd')
         pass
 
     def build_input(self):
-        self.init_default_options()
         inp_height = self.get_option('inp_height')
         inp_width = self.get_option('inp_width')
         inp_depth = self.get_option('inp_depth')
@@ -79,19 +80,17 @@ class ResNetExampleModel(tfplus.nn.Model):
         wd = self.get_option('wd')
         phase_train = self.get_input_var('phase_train')
 
-        init_channel = channels[0]
-        self.w1 = tf.Variable(tf.truncated_normal_initializer(
-            stddev=0.01)([3, 3, inp_depth, init_channel]), name='w1')
-        self.b1 = tf.Variable(tf.truncated_normal_initializer(
-            stddev=0.01)([init_channel]), name='b1')
+        self.conv = tfplus.nn.CNN([3], [inp_depth, channels[0]], [1], [None],
+                                  [True], wd=wd, scope='conv')
         self.res_net = tfplus.nn.ResNet(layers=layers,
                                         bottleneck=bottleneck,
                                         channels=channels,
-                                        strides=strides)
+                                        strides=strides,
+                                        wd=wd)
         cnn_dim = channels[-1]
         mlp_dims = [cnn_dim] + [10]
         mlp_act = [tf.nn.softmax]
-        self.mlp = tfplus.nn.MLP(mlp_dims, mlp_act)
+        self.mlp = tfplus.nn.MLP(mlp_dims, mlp_act, wd=wd)
         pass
 
     def build(self, inp):
@@ -99,11 +98,7 @@ class ResNetExampleModel(tfplus.nn.Model):
         x = inp['x']
         phase_train = inp['phase_train']
         channels = self.get_option('channels')
-        init_channel = channels[0]
-
-        h1 = tfplus.nn.Conv2D(self.w1)(x) + self.b1
-        bn1 = tfplus.nn.BatchNorm(init_channel)
-        h1 = bn1({'input': h1, 'phase_train': phase_train})
+        h1 = self.conv({'input': x, 'phase_train': phase_train})
         hn = self.res_net({'input': h1, 'phase_train': phase_train})
         hn = tfplus.nn.AvgPool(8)(hn)
         cnn_dim = channels[-1]
@@ -129,10 +124,13 @@ class ResNetExampleModel(tfplus.nn.Model):
         return total_loss
 
     def build_optim(self, loss):
-        eps = self.get_option('adam_eps')
         learn_rate = self.get_option('learn_rate')
+        lr_decay = self.get_option('learn_rate_decay')
+        epochs_decay = self.get_option('epochs_per_lr_decay')
+        num_ex = tf.shape(self.get_var('x'))[0]
         learn_rate = tf.train.exponential_decay(
-            learn_rate, self.global_step, 25000, .1, staircase=True)
+            learn_rate, self.global_step, 40000 * epochs_decay / num_ex,
+            lr_decay, staircase=True)
         self.register_var('learn_rate', learn_rate)
         # optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
         optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=0.9)
@@ -210,7 +208,7 @@ if __name__ == '__main__':
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_iter(data['train'].get_iter(batch_size=128, cycle=True))
+        .set_iter(data['train'].get_iter(batch_size=32, cycle=True))
         .set_phase_train(True)
         .set_num_batch(10)
         .set_interval(1))
@@ -225,7 +223,7 @@ if __name__ == '__main__':
         .add_csv_listener('Accuracy', 'acc', 'train')
         .add_cmd_listener('Accuracy', 'acc')
         .add_csv_listener('Learning Rate', 'learn_rate', 'train')
-        .set_iter(data['train'].get_iter(batch_size=128, cycle=True))
+        .set_iter(data['train'].get_iter(batch_size=32, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -235,7 +233,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['valid'].get_iter(batch_size=128, cycle=True))
+        .set_iter(data['valid'].get_iter(batch_size=32, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -244,7 +242,7 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_id'])
         .add_plot_listener('Input', {'x_id': 'images'})
-        .set_iter(data['valid'].get_iter(batch_size=128, stagnant=True))
+        .set_iter(data['valid'].get_iter(batch_size=32, stagnant=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass

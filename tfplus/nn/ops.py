@@ -2,6 +2,7 @@ from graph_builder import GraphBuilder
 
 import tensorflow as tf
 
+
 def conv2d(x, w, stride=1):
     """2-D convolution.
 
@@ -31,6 +32,18 @@ class Conv2D(GraphBuilder):
         return tf.nn.conv2d(x, self.w,
                             strides=[1, self.stride, self.stride, 1],
                             padding='SAME')
+
+
+class DilatedConv2D(GraphBuilder):
+    """Dilated 2D convolution."""
+
+    def __init__(self, w, rate=1):
+        self.rate = rate
+        pass
+
+    def build(self, inp):
+        x = self.get_single_input(inp)
+        return tf.nn.atrous_conv2d(x, self.w, rate=self.rate, padding='SAME')
 
 
 def max_pool(x, ratio):
@@ -115,7 +128,7 @@ class CE(GraphBuilder):
         eps = 1e-5
         ce = -y_gt * tf.log(y_out + eps)
         return ce
-        
+
 
 def dropout(x, keep_prob, phase_train):
     """Add dropout layer"""

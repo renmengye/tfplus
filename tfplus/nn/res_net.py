@@ -22,7 +22,7 @@ class ResNet(GraphBuilder):
         scope: main scope name for all variables in this graph.
     """
 
-    def __init__(self, layers, channels, strides, bottleneck=False, dilation=False, scope='res_net'):
+    def __init__(self, layers, channels, strides, bottleneck=False, dilation=False, wd=None, scope='res_net'):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -33,6 +33,8 @@ class ResNet(GraphBuilder):
         self.proj_w = [None] * self.num_stage
         self.b = [None] * self.num_stage
         self.bottleneck = bottleneck
+        self.dilation = dilation
+        self.wd = wd
         if bottleneck:
             self.unit_depth = 3
         else:
@@ -78,7 +80,7 @@ class ResNet(GraphBuilder):
                         self.b[ii][jj] = [None] * self.unit_depth
                         if ch_in != ch_out:
                             self.proj_w[ii] = self.declare_var(
-                                [1, 1, ch_in, ch_out], name='proj_w')
+                                [1, 1, ch_in, ch_out], wd=self.wd, name='proj_w')
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
                             for kk in xrange(self.unit_depth):
@@ -86,9 +88,10 @@ class ResNet(GraphBuilder):
                                     f_, ch_in_, ch_out_ = self.compute_in_out(
                                         kk, ch_in, ch_out)
                                     self.w[ii][jj][kk] = self.declare_var(
-                                        [f_, f_, ch_in_, ch_out_], name='w')
+                                        [f_, f_, ch_in_, ch_out_], wd=self.wd,
+                                        name='w')
                                     self.b[ii][jj][kk] = self.declare_var(
-                                        [ch_out_], name='w')
+                                        [ch_out_], wd=self.wd, name='b')
                                 self.log.info('Filter: {}'.format(
                                     [f_, f_, ch_in_, ch_out_]))
                                 self.log.info('Weights: {}'.format(
