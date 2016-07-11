@@ -13,7 +13,7 @@ TEST_IMAGES = 't10k-images-idx3-ubyte.gz'
 TEST_LABELS = 't10k-labels-idx1-ubyte.gz'
 VALIDATION_SIZE = 5000
 
-cmd_args.add('dataset_folder', 'str', '../MNIST_data/')
+cmd_args.add('mnist:dataset_folder', 'str', '../MNIST_data/')
 
 
 def maybe_download(filename, work_directory):
@@ -94,7 +94,7 @@ class MNISTDataProvider(data_provider.DataProvider):
         self.filename = filename
         self._images = None
         self._labels = None
-        self.register_option('dataset_folder')
+        self.register_option('mnist:dataset_folder')
         pass
 
     def init_default_options(self):
@@ -106,7 +106,7 @@ class MNISTDataProvider(data_provider.DataProvider):
 
     def init_data(self):
         self.init_default_options()
-        self.folder = self.get_option('dataset_folder')
+        self.folder = self.get_option('mnist:dataset_folder')
         if self.filename is None:
             if self.split == 'train' or self.split == 'valid':
                 self.image_filename = 'train-images-idx3-ubyte.gz'
