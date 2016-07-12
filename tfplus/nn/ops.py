@@ -38,6 +38,8 @@ class DilatedConv2D(GraphBuilder):
     """Dilated 2D convolution."""
 
     def __init__(self, w, rate=1):
+        super(DilatedConv2D, self).__init__()
+        self.w = w
         self.rate = rate
         pass
 

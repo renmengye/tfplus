@@ -1,6 +1,6 @@
 from graph_builder import GraphBuilder
 from batch_norm import BatchNorm
-from ops import Conv2D, MaxPool, AvgPool
+from ops import Conv2D, DilatedConv2D, MaxPool, AvgPool
 
 import tensorflow as tf
 
@@ -22,7 +22,8 @@ class ResNet(GraphBuilder):
         scope: main scope name for all variables in this graph.
     """
 
-    def __init__(self, layers, channels, strides, bottleneck=False, dilation=False, wd=None, scope='res_net'):
+    def __init__(self, layers, channels, strides, bottleneck=False,
+                 dilation=False, wd=None, scope='res_net'):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -80,7 +81,8 @@ class ResNet(GraphBuilder):
                         self.b[ii][jj] = [None] * self.unit_depth
                         if ch_in != ch_out:
                             self.proj_w[ii] = self.declare_var(
-                                [1, 1, ch_in, ch_out], wd=self.wd, name='proj_w')
+                                [1, 1, ch_in, ch_out], wd=self.wd,
+                                name='proj_w')
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
                             for kk in xrange(self.unit_depth):
@@ -121,9 +123,14 @@ class ResNet(GraphBuilder):
                             ch_in = ch_out
                             pass
                         if ch_in != ch_out:
-                            prev_inp = Conv2D(
-                                self.proj_w[ii],
-                                stride=self.strides[ii])(prev_inp)
+                            if self.dilation:
+                                prev_inp = DilatedConv2D(
+                                    self.proj_w[ii], rate=self.strides[ii])(
+                                    prev_inp)
+                            else:
+                                prev_inp = Conv2D(
+                                    self.proj_w[ii],
+                                    stride=self.strides[ii])(prev_inp)
                             self.log.info('After proj shape: {}'.format(
                                 prev_inp.get_shape()))
                         with tf.variable_scope('layer_{}'.format(jj)):
@@ -135,12 +142,25 @@ class ResNet(GraphBuilder):
                                         {'input': h,
                                          'phase_train': phase_train})
                                     h = tf.nn.relu(h)
-                                    h = Conv2D(self.w[ii][jj][kk], stride=s)(
-                                        h) + self.b[ii][jj][kk]
+                                    if self.dilation:
+                                        h = DilatedConv2D(
+                                            self.w[ii][jj][kk], rate=s)(
+                                            h) + self.b[ii][jj][kk]
+                                    else:
+                                        h = Conv2D(self.w[ii][jj][kk],
+                                                   stride=s)(
+                                            h) + self.b[ii][jj][kk]
                                     self.log.info('Unit {} shape: {}'.format(
                                         kk, h.get_shape()))
                                     pass
-                                s = 1
+
+                                # Change the stride to 1 after 2.
+                                # Only in standard mode.
+                                # In dilation mode, everything is accumulated.
+                                # Nothing is down-sampled.
+                                # i.e. 1,1,1,2,2,2,4,4,4,8,8,8
+                                if not self.dilation:
+                                    s = 1
                                 pass
                             pass
                         prev_inp = prev_inp + h
@@ -166,6 +186,7 @@ if __name__ == '__main__':
     bn1 = BatchNorm(64)
     h1 = bn1({'input': h1, 'phase_train': phase_train})
     h1 = MaxPool(2)(h1)
+
     hn = ResNet(layers=[3, 4, 6, 3],
                 bottleneck=True,
                 channels=[64, 64, 128, 256, 512],
@@ -174,6 +195,7 @@ if __name__ == '__main__':
     print hn.get_shape()
     hn = AvgPool(7)(hn)
     print hn.get_shape()
+
     hn = ResNet(layers=[3, 4, 6, 3],
                 bottleneck=False,
                 channels=[64, 64, 128, 256, 512],
@@ -181,4 +203,20 @@ if __name__ == '__main__':
         {'input': h1, 'phase_train': phase_train})
     print hn.get_shape()
     hn = AvgPool(7)(hn)
+    print hn.get_shape()
+
+    hn = ResNet(layers=[3, 4, 6, 3],
+                bottleneck=False,
+                dilation=True,
+                channels=[64, 64, 128, 256, 512],
+                strides=[1, 2, 4, 8])(
+        {'input': h1, 'phase_train': phase_train})
+    print hn.get_shape()
+
+    hn = ResNet(layers=[3, 4, 6, 3],
+                bottleneck=True,
+                dilation=True,
+                channels=[64, 64, 128, 256, 512],
+                strides=[1, 2, 4, 8])(
+        {'input': h1, 'phase_train': phase_train})
     print hn.get_shape()
