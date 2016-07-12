@@ -111,20 +111,25 @@ class ResNet(GraphBuilder):
         prev_inp = x
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
+                print 'Stage count', ii, 'of', self.num_stage
                 ch_in = self.channels[ii]
                 ch_out = self.channels[ii + 1]
                 s = self.strides[ii]
                 with tf.variable_scope('stage_{}'.format(ii)):
                     for jj in xrange(self.layers[ii]):
+                        print 'Layer count', jj, 'of', self.layers[ii]
                         h = prev_inp
                         if jj > 0:
                             ch_in = ch_out
                             pass
                         if ch_in != ch_out:
                             prev_inp = Conv2D(
-                                self.proj_w[ii],
-                                stride=self.strides[ii])(prev_inp)
+                                self.proj_w[ii], stride=s)(prev_inp)
                             self.log.info('After proj shape: {}'.format(
+                                prev_inp.get_shape()))
+                        elif s != 1:
+                            prev_inp = MaxPool(s)(prev_inp)
+                            self.log.info('After pool shape: {}'.format(
                                 prev_inp.get_shape()))
                         with tf.variable_scope('layer_{}'.format(jj)):
                             for kk in xrange(self.unit_depth):

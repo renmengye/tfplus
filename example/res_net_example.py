@@ -26,9 +26,9 @@ tfplus.cmd_args.add('restore_logs', 'str', None)
 tfplus.cmd_args.add('inp_height', 'int', 32)
 tfplus.cmd_args.add('inp_width', 'int', 32)
 tfplus.cmd_args.add('inp_depth', 'int', 3)
-tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9])
-tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2])
-tfplus.cmd_args.add('channels', 'list<int>', [16, 16, 32, 64])
+tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9, 9])
+tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2, 2])
+tfplus.cmd_args.add('channels', 'list<int>', [16, 16, 32, 64, 64])
 tfplus.cmd_args.add('bottleneck', 'bool', False)
 tfplus.cmd_args.add('learn_rate', 'float', 0.1)
 tfplus.cmd_args.add('learn_rate_decay', 'float', 0.1)
@@ -98,9 +98,12 @@ class ResNetExampleModel(tfplus.nn.Model):
         x = inp['x']
         phase_train = inp['phase_train']
         channels = self.get_option('channels')
+        strides = self.get_option('strides')
         h1 = self.conv({'input': x, 'phase_train': phase_train})
         hn = self.res_net({'input': h1, 'phase_train': phase_train})
-        hn = tfplus.nn.AvgPool(8)(hn)
+        ratio = 32 / np.array(strides).prod()
+        print ratio
+        hn = tfplus.nn.AvgPool(ratio)(hn)
         cnn_dim = channels[-1]
         hn = tf.reshape(hn, [-1, cnn_dim])
         y_out = self.mlp({'input': hn, 'phase_train': phase_train})
@@ -183,7 +186,7 @@ if __name__ == '__main__':
 
     # Initialize data.
     data = {}
-    for split in ['train', 'valid']:
+    for split in ['train', 'test']:
         data[split] = tfplus.data.create_from_main('cifar10', split=split)
         pass
 
@@ -233,7 +236,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['valid'].get_iter(batch_size=32, cycle=True))
+        .set_iter(data['test'].get_iter(batch_size=32, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -242,7 +245,7 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_id'])
         .add_plot_listener('Input', {'x_id': 'images'})
-        .set_iter(data['valid'].get_iter(batch_size=32, stagnant=True))
+        .set_iter(data['test'].get_iter(batch_size=32, stagnant=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass
