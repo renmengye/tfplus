@@ -57,6 +57,7 @@ class Model(GraphBuilder, OptionBase):
         self._has_init = False
         self._has_built_all = False
         self._folder = None
+        self._global_step = None
         pass
 
     @property
@@ -297,10 +298,12 @@ class Model(GraphBuilder, OptionBase):
     def build_optim(self, loss):
         raise Exception('Not implemented')
 
-    def build_global_step(self):
-        self.global_step = tf.Variable(0.0)
-        self.register_var('step', self.global_step)
-        return self.global_step
+    @property
+    def global_step(self):
+        if self._global_step is None:
+            self._global_step = tf.Variable(0.0)
+            self.register_var('step', self._global_step)
+        return self._global_step
 
     def build_eval(self):
         """Build nodes for evaluation/inference."""
@@ -316,7 +319,6 @@ class Model(GraphBuilder, OptionBase):
                 inp_var = self.build_input()
                 output_var = self.build(inp_var)
                 loss_var = self.build_loss(inp_var, output_var)
-                self.build_global_step()
                 train_step = self.build_optim(loss_var)
                 self.register_var('train_step', train_step)
         return self
