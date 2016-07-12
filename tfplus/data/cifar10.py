@@ -40,7 +40,35 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
                     self._images[start: end] = _data['data'].reshape(
                         [10000, 3, 32, 32]).transpose([0, 2, 3, 1])
                     self._labels[start: end] = np.array(_data['labels'])
+<<<<<<< HEAD
         elif self.split == 'test':
+=======
+        elif self.split == 'valid':
+            batch = 4
+            fname = os.path.join(self.get_option(
+                'cifar10:dataset_folder'), 'data_batch_{}'.format(batch + 1))
+            with open(fname, 'rb') as fo:
+                _data = pkl.load(fo)
+                self._images = _data['data'].reshape(
+                    [10000, 3, 32, 32]).transpose([0, 2, 3, 1])
+                self._labels = np.array(_data['labels'])
+            pass
+        elif self.split == 'train_all':
+            self._images = np.zeros([50000, 32, 32, 3], dtype='uint8')
+            self._labels = np.zeros([50000], dtype='int')
+            for batch in xrange(5):
+                fname = os.path.join(self.get_option(
+                    'cifar10:dataset_folder'), 'data_batch_{}'.format(
+                    batch + 1))
+                start = batch * 10000
+                end = (batch + 1) * 10000
+                with open(fname, 'rb') as fo:
+                    _data = pkl.load(fo)
+                    self._images[start: end] = _data['data'].reshape(
+                        [10000, 3, 32, 32]).transpose([0, 2, 3, 1])
+                    self._labels[start: end] = np.array(_data['labels'])
+        elif self.split == ' test':
+>>>>>>> 1e9225bbe30bc05004697fd285402c8185e1853b
             fname = os.path.join(self.get_option(
                 'cifar10:dataset_folder'), 'test_batch')
             with open(fname, 'rb') as fo:
@@ -56,7 +84,15 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
 
     def get_size(self):
         if self.split == 'train':
+<<<<<<< HEAD
             return 50000
+=======
+            return 40000
+        elif self.split == 'train_all':
+            return 50000
+        elif self.split == 'valid':
+            return 10000
+>>>>>>> 1e9225bbe30bc05004697fd285402c8185e1853b
         elif self.split == 'test':
             return 10000
         else:
@@ -74,7 +110,8 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
         }
         return results
 
-tfplus.data.data_provider.get_factory().register('cifar10', CIFAR10DataProvider)
+tfplus.data.data_provider.get_factory().register('cifar10',
+                                                 CIFAR10DataProvider)
 
 
 if __name__ == '__main__':
