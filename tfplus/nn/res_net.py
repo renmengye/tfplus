@@ -15,15 +15,17 @@ class ResNet(GraphBuilder):
         layers: list of int. Number of layers in each stage.
         channels: list of int. Number of channels in each stage.
         strides: list of int. Sub-sample coefficient in each stage.
-        bottleneck: bool. Whether do 2 3x3 convs on each layer or 1x1, 3x3, 
+        bottleneck: bool. Whether do 2 3x3 convs on each layer or 1x1, 3x3,
         1x1 convs on each layer.
-        dilation: Whether do subsample on strides (for classification), or do 
+        dilation: Whether do subsample on strides (for classification), or do
         dilated convolution on strides (for segmentation)
         scope: main scope name for all variables in this graph.
+        shortcut: identity or projection.
     """
 
     def __init__(self, layers, channels, strides, bottleneck=False,
-                 dilation=False, wd=None, scope='res_net'):
+                 dilation=False, wd=None, scope='res_net',
+                 shortcut='projection'):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -35,6 +37,7 @@ class ResNet(GraphBuilder):
         self.b = [None] * self.num_stage
         self.bottleneck = bottleneck
         self.dilation = dilation
+        self.shortcut = shortcut
         self.wd = wd
         if bottleneck:
             self.unit_depth = 3
@@ -65,6 +68,23 @@ class ResNet(GraphBuilder):
             ch_out_ = ch_out
         return f_, ch_in_, ch_out_
 
+    def apply_shortcut(self, prev_inp, ch_in, ch_out, proj_w=None, stride=None):
+        if self.shortcut == 'projection':
+            if self.dilation:
+                prev_inp = DilatedConv2D(proj_w, rate=stride)(prev_inp)
+            else:
+                prev_inp = Conv2D(proj_w, stride=stride)(prev_inp)
+        elif self.shortcut == 'identity':
+            pad_ch = ch_out - ch_in
+            if pad_ch < 0:
+                raise Exception('Must use projection when ch_in > ch_out.')
+            prev_inp = tf.pad(prev_inp, [[0, 0], [0, 0], [0, 0], [0, pad_ch]])
+            if stride > 1:
+                prev_inp = AvgPool(stride)(prev_inp)
+        self.log.info('After proj shape: {}'.format(
+            prev_inp.get_shape()))
+        return prev_inp
+
     def init_var(self):
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
@@ -80,9 +100,11 @@ class ResNet(GraphBuilder):
                         self.w[ii][jj] = [None] * self.unit_depth
                         self.b[ii][jj] = [None] * self.unit_depth
                         if ch_in != ch_out:
-                            self.proj_w[ii] = self.declare_var(
-                                [1, 1, ch_in, ch_out], wd=self.wd,
-                                name='proj_w')
+                            if self.shortcut == 'projection':
+                                self.proj_w[ii] = self.declare_var(
+                                    [1, 1, ch_in, ch_out], wd=self.wd,
+                                    name='proj_w')
+                                pass
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
                             for kk in xrange(self.unit_depth):
@@ -125,21 +147,19 @@ class ResNet(GraphBuilder):
                         h = prev_inp
                         if jj > 0:
                             ch_in = ch_out
-                            pass
-                        if ch_in != ch_out:
-                            if self.dilation:
-                                prev_inp = DilatedConv2D(
-                                    self.proj_w[ii], rate=s)(prev_inp)
-                            else:
-                                prev_inp = Conv2D(
-                                    self.proj_w[ii], stride=s)(prev_inp)
-                            self.log.info('After proj shape: {}'.format(
-                                prev_inp.get_shape()))
-                        elif s != 1:
-                            if not self.dilation:
-                                prev_inp = MaxPool(s)(prev_inp)
-                                self.log.info('After pool shape: {}'.format(
-                                    prev_inp.get_shape()))
+                        else:
+                            # First unit of the layer.
+                            if ch_in != ch_out:
+                                prev_inp = self.apply_shortcut(
+                                    prev_inp, ch_in, ch_out,
+                                    proj_w=self.proj_w[ii],
+                                    stride=s)
+                            elif s != 1:
+                                if not self.dilation:
+                                    prev_inp = AvgPool(s)(prev_inp)
+                                    self.log.info('After pool shape: {}'.format(
+                                        prev_inp.get_shape()))
+
                         with tf.variable_scope('layer_{}'.format(jj)):
                             self.bn[ii][jj] = [None] * self.unit_depth
                             for kk in xrange(self.unit_depth):
@@ -162,15 +182,13 @@ class ResNet(GraphBuilder):
                                     self.log.info('Unit {} shape: {}'.format(
                                         kk, h.get_shape()))
                                     pass
-
-                                # Change the stride to 1 after 2.
-                                # Only in standard mode.
-                                # In dilation mode, everything is accumulated.
-                                # Nothing is down-sampled.
-                                # i.e. 1,1,1,2,2,2,4,4,4,8,8,8
-                                if not self.dilation:
+                                if not self.dilation and kk == 0:
+                                    # Change the stride to 1 after 2.
+                                    # Only in standard mode.
+                                    # In dilation mode, everything is accumulated.
+                                    # Nothing is down-sampled.
+                                    # i.e. 1,1,1,2,2,2,4,4,4,8,8,8
                                     s = 1
-                                pass
                             pass
                         prev_inp = prev_inp + h
                         self.log.info('After add shape: {}'.format(
@@ -222,6 +240,7 @@ if __name__ == '__main__':
 
     hn = ResNet(layers=[3, 4, 6, 3],
                 bottleneck=True,
+                shortcut='projection',
                 channels=[64, 64, 128, 256, 512],
                 strides=[1, 2, 2, 2])(
         {'input': h1, 'phase_train': phase_train})
@@ -231,6 +250,7 @@ if __name__ == '__main__':
 
     hn = ResNet(layers=[3, 4, 6, 3],
                 bottleneck=False,
+                shortcut='projection',
                 channels=[64, 64, 128, 256, 512],
                 strides=[1, 2, 2, 2])(
         {'input': h1, 'phase_train': phase_train})
@@ -241,6 +261,7 @@ if __name__ == '__main__':
     hn = ResNet(layers=[3, 4, 6, 3],
                 bottleneck=False,
                 dilation=True,
+                shortcut='projection',
                 channels=[64, 64, 128, 256, 512],
                 strides=[1, 2, 4, 8])(
         {'input': h1, 'phase_train': phase_train})
@@ -249,7 +270,17 @@ if __name__ == '__main__':
     hn = ResNet(layers=[3, 4, 6, 3],
                 bottleneck=True,
                 dilation=True,
+                shortcut='projection',
                 channels=[64, 64, 128, 256, 512],
                 strides=[1, 2, 4, 8])(
+        {'input': h1, 'phase_train': phase_train})
+    print hn.get_shape()
+
+    hn = ResNet(layers=[3, 4, 6, 3],
+                bottleneck=True,
+                dilation=False,
+                shortcut='identity',
+                channels=[64, 64, 128, 256, 512],
+                strides=[1, 2, 2, 2])(
         {'input': h1, 'phase_train': phase_train})
     print hn.get_shape()

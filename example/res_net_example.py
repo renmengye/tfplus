@@ -15,13 +15,13 @@ import tfplus.data.cifar10
 tfplus.init('Train a simple ResNet on CIFAR-10')
 
 # Main options
-tfplus.cmd_args.add('batch_size', 'int', 100)
 tfplus.cmd_args.add('gpu', 'int', -1)
 tfplus.cmd_args.add('results', 'str', '../results')
 tfplus.cmd_args.add('logs', 'str', '../logs')
 tfplus.cmd_args.add('localhost', 'str', 'http://localhost')
 tfplus.cmd_args.add('restore_model', 'str', None)
 tfplus.cmd_args.add('restore_logs', 'str', None)
+tfplus.cmd_args.add('batch_size', 'int', 128)
 
 # Model options
 tfplus.cmd_args.add('inp_height', 'int', 32)
@@ -31,9 +31,11 @@ tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9])
 tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2])
 tfplus.cmd_args.add('channels', 'list<int>', [16, 16, 32, 64])
 tfplus.cmd_args.add('bottleneck', 'bool', False)
+tfplus.cmd_args.add('shortcut', 'str', 'identity')
 tfplus.cmd_args.add('learn_rate', 'float', 0.01)
 tfplus.cmd_args.add('learn_rate_decay', 'float', 0.1)
-tfplus.cmd_args.add('epochs_per_lr_decay', 'int', 12)
+tfplus.cmd_args.add('steps_per_lr_decay', 'int', 32000)
+tfplus.cmd_args.add('momentum', 'float', 0.9)
 tfplus.cmd_args.add('wd', 'float', 1e-4)
 
 
@@ -48,9 +50,11 @@ class ResNetExampleModel(tfplus.nn.Model):
         self.register_option('strides')
         self.register_option('channels')
         self.register_option('bottleneck')
+        self.register_option('shortcut')
         self.register_option('learn_rate')
         self.register_option('learn_rate_decay')
-        self.register_option('epochs_per_lr_decay')
+        self.register_option('steps_per_lr_decay')
+        self.register_option('momentum')
         self.register_option('wd')
         pass
 
@@ -78,6 +82,7 @@ class ResNetExampleModel(tfplus.nn.Model):
         strides = self.get_option('strides')
         channels = self.get_option('channels')
         bottleneck = self.get_option('bottleneck')
+        shortcut = self.get_option('shortcut')
         wd = self.get_option('wd')
         phase_train = self.get_input_var('phase_train')
 
@@ -91,6 +96,7 @@ class ResNetExampleModel(tfplus.nn.Model):
                                   [tf.nn.relu], [True], wd=wd, scope='conv')
         self.res_net = tfplus.nn.ResNet(layers=layers,
                                         bottleneck=bottleneck,
+                                        shortcut=shortcut,
                                         channels=channels,
                                         strides=strides,
                                         wd=wd)
@@ -137,14 +143,15 @@ class ResNetExampleModel(tfplus.nn.Model):
     def build_optim(self, loss):
         learn_rate = self.get_option('learn_rate')
         lr_decay = self.get_option('learn_rate_decay')
-        epochs_decay = self.get_option('epochs_per_lr_decay')
+        steps_decay = self.get_option('steps_per_lr_decay')
+        mom = self.get_option('momentum')
         num_ex = tf.shape(self.get_var('x'))[0]
         learn_rate = tf.train.exponential_decay(
-            learn_rate, self.global_step, 50000 * epochs_decay / num_ex,
+            learn_rate, self.global_step, steps_decay / num_ex,
             lr_decay, staircase=True)
         self.register_var('learn_rate', learn_rate)
         # optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
-        optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=0.9)
+        optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=mom)
         train_step = optimizer.minimize(loss, global_step=self.global_step)
         return train_step
 
