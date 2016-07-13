@@ -236,7 +236,8 @@ if __name__ == '__main__':
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_data_provider(get_data('train'))
+        .set_data_provider(get_data('train', batch_size=opt['batch_size'],
+                                    cycle=True))
         .set_phase_train(True)
         .set_num_batch(10)
         .set_interval(1))
@@ -251,7 +252,8 @@ if __name__ == '__main__':
         .add_csv_listener('Accuracy', 'acc', 'train')
         .add_cmd_listener('Accuracy', 'acc')
         .add_csv_listener('Learning Rate', 'learn_rate', 'train')
-        .set_data_provider(get_data('train'))
+        .set_data_provider(get_data('train', batch_size=opt['batch_size'],
+                                    cycle=True))
         .set_phase_train(False)
         .set_num_batch(3)
         .set_offset(100)
@@ -262,7 +264,8 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_data_provider(get_data('test'))
+        .set_data_provider(get_data('test', batch_size=opt['batch_size'],
+                                    cycle=True))
         .set_phase_train(False)
         .set_num_batch(10000 / opt['batch_size'])
         .set_offset(100)
@@ -272,7 +275,8 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_trans'])
         .add_plot_listener('Input', {'x_trans': 'images'})
-        .set_data_provider(get_data('test'))
+        .set_data_provider(get_data('test', batch_size=opt['batch_size'],
+                                    cycle=True))
         .set_phase_train(False)
         .set_offset(100)
         .set_interval(10))).run()
