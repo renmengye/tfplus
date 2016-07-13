@@ -87,7 +87,7 @@ class ResNetExampleModel(tfplus.nn.Model):
         phase_train = self.get_input_var('phase_train')
 
         self.rnd_trans = tfplus.nn.ImageRandomTransform(
-            padding=4, # was 8 
+            padding=4,  # was 8
             rnd_hflip=True,
             rnd_vflip=False,
             rnd_transpose=False,
@@ -147,8 +147,8 @@ class ResNetExampleModel(tfplus.nn.Model):
         mom = self.get_option('momentum')
         num_ex = tf.shape(self.get_var('x'))[0]
         learn_rate = tf.train.exponential_decay(
-            learn_rate, self.global_step, steps_decay / num_ex,
-            lr_decay, staircase=True)
+            learn_rate, self.global_step, steps_decay, lr_decay,
+            staircase=True)
         self.register_var('learn_rate', learn_rate)
         # optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
         optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=mom)
@@ -247,7 +247,7 @@ if __name__ == '__main__':
         .set_phase_train(False)
         .set_num_batch(3)
         .set_interval(10))
-     .add_runner( # Full epoch evaluation on validation set.
+     .add_runner(  # Full epoch evaluation on validation set.
         tfplus.runner.create_from_main('average')
         .set_name('valid')
         .set_outputs(['acc'])
