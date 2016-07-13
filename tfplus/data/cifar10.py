@@ -51,7 +51,6 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
                 _data = pkl.load(fo)
                 self._images = _data['data'].reshape(
                     [10000, 3, 32, 32]).transpose([0, 2, 3, 1])
-                print _data.keys()
                 self._labels = np.array(_data['labels'])
             pass
         else:

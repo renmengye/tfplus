@@ -263,8 +263,7 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_trans'])
         .add_plot_listener('Input', {'x_trans': 'images'})
-        .set_iter(data['test'].get_iter(batch_size=10,
-                                        stagnant=True))
+        .set_iter(data['test'].get_iter(batch_size=10, stagnant=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass
