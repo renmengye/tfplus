@@ -47,14 +47,14 @@ class ResNet(GraphBuilder):
             if kk == 0:
                 f_ = 1
                 ch_in_ = ch_in
-                ch_out_ = ch_in / 4
+                ch_out_ = ch_out / 4
             elif kk == 1:
                 f_ = 3
-                ch_in_ = ch_in / 4
-                ch_out_ = ch_in / 4
+                ch_in_ = ch_out / 4
+                ch_out_ = ch_out / 4
             else:
                 f_ = 1
-                ch_in_ = ch_in / 4
+                ch_in_ = ch_out / 4
                 ch_out_ = ch_out
         else:
             f_ = 3
@@ -111,6 +111,7 @@ class ResNet(GraphBuilder):
         x = inp['input']
         phase_train = inp['phase_train']
         prev_inp = x
+        self.bn = [None] * self.num_stage
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
                 print 'Stage count', ii, 'of', self.num_stage
@@ -118,6 +119,7 @@ class ResNet(GraphBuilder):
                 ch_out = self.channels[ii + 1]
                 s = self.strides[ii]
                 with tf.variable_scope('stage_{}'.format(ii)):
+                    self.bn[ii] = [None] * self.layers[ii]
                     for jj in xrange(self.layers[ii]):
                         print 'Layer count', jj, 'of', self.layers[ii]
                         h = prev_inp
@@ -125,28 +127,27 @@ class ResNet(GraphBuilder):
                             ch_in = ch_out
                             pass
                         if ch_in != ch_out:
-                            prev_inp = Conv2D(
-                                self.proj_w[ii], stride=s)(prev_inp)
                             if self.dilation:
                                 prev_inp = DilatedConv2D(
-                                    self.proj_w[ii], rate=self.strides[ii])(
-                                    prev_inp)
+                                    self.proj_w[ii], rate=s)(prev_inp)
                             else:
                                 prev_inp = Conv2D(
-                                    self.proj_w[ii],
-                                    stride=self.strides[ii])(prev_inp)
+                                    self.proj_w[ii], stride=s)(prev_inp)
                             self.log.info('After proj shape: {}'.format(
                                 prev_inp.get_shape()))
                         elif s != 1:
-                            prev_inp = MaxPool(s)(prev_inp)
-                            self.log.info('After pool shape: {}'.format(
-                                prev_inp.get_shape()))
+                            if not self.dilation:
+                                prev_inp = MaxPool(s)(prev_inp)
+                                self.log.info('After pool shape: {}'.format(
+                                    prev_inp.get_shape()))
                         with tf.variable_scope('layer_{}'.format(jj)):
+                            self.bn[ii][jj] = [None] * self.unit_depth
                             for kk in xrange(self.unit_depth):
                                 with tf.variable_scope('unit_{}'.format(kk)):
                                     f_, ch_in_, ch_out_ = self.compute_in_out(
                                         kk, ch_in, ch_out)
-                                    h = BatchNorm(ch_in_)(
+                                    self.bn[ii][jj][kk] = BatchNorm(ch_in_)
+                                    h = self.bn[ii][jj][kk](
                                         {'input': h,
                                          'phase_train': phase_train})
                                     h = tf.nn.relu(h)
@@ -179,6 +180,30 @@ class ResNet(GraphBuilder):
                 pass
             pass
         return prev_inp
+
+    def get_save_var_dict(self):
+        results = {}
+        for ii in xrange(self.num_stage):
+            stage_prefix = 'stage_{}/'.format(ii)
+            if self.proj_w[ii] is not None:
+                results[stage_prefix + 'proj_w'] = self.proj_w[ii]
+            for jj in xrange(self.layers[ii]):
+                for kk in xrange(self.unit_depth):
+                    prefix = 'stage_{}/layer_{}/unit_{}/'.format(ii, jj, kk)
+                    results[prefix + 'w'] = self.w[ii][jj][kk]
+                    results[prefix + 'b'] = self.b[ii][jj][kk]
+                    bn = self.bn[ii][jj][kk]
+                    if bn is not None:
+                        results[prefix + 'bn/beta'] = bn.beta
+                        results[prefix + 'bn/gamma'] = bn.gamma
+                        ema_mean, ema_var = bn.get_shadow_ema()
+                        results[prefix + 'bn/ema_mean'] = ema_mean
+                        results[prefix + 'bn/ema_var'] = ema_var
+                        pass
+                    pass
+                pass
+            pass
+        return results
     pass
 
 if __name__ == '__main__':

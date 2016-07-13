@@ -64,7 +64,7 @@ class Plotter(Listener):
 
 class ThumbnailPlotter(Plotter):
 
-    def __init__(self, filename=None, name=None, cmap='Greys', max_num_col=9):
+    def __init__(self, filename=None, name=None, cmap='Greys', max_num_col=5):
         super(ThumbnailPlotter, self).__init__(filename=filename, name=name)
         self._cmap = cmap
         self._max_num_col = max_num_col
@@ -83,7 +83,7 @@ class ThumbnailPlotter(Plotter):
         num_items = img.shape[0]
         num_row, num_col, calc = self.calc_row_col(num_ex, num_items)
 
-        f1, axarr = plt.subplots(num_row, num_col, figsize=(10, num_row))
+        f1, axarr = plt.subplots(num_row, num_col, figsize=(10, 2 * num_row))
         self.set_axis_off(axarr, num_row, num_col)
 
         for ii in xrange(num_items):

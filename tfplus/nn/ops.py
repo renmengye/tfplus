@@ -34,6 +34,64 @@ class Conv2D(GraphBuilder):
                             padding='SAME')
 
 
+class Conv2DW(GraphBuilder):
+
+    def __init__(self, f, ch_in, ch_out, stride=1, wd=None, scope='conv'):
+        super(Conv2DW, self).__init__()
+        self.stride = stride
+        self.f = f
+        self.ch_in = ch_in
+        self.ch_out = ch_out
+        self.scope = scope
+        self.wd = wd
+        pass
+
+    def init_var(self):
+        self.w = self.declare_var(
+            [self.f, self.f, self.ch_in, self.ch_out], name='w', wd=self.wd)
+        pass
+
+    def build(self, inp):
+        with tf.variable_scope(self.scope):
+            self.lazy_init_var()
+            x = self.get_single_input(inp)
+            return tf.nn.conv2d(x, self.w,
+                                strides=[1, self.stride, self.stride, 1],
+                                padding='SAME')
+
+    def get_save_var_dict(self):
+        return {
+            'w': self.w
+        }
+
+
+class Linear(GraphBuilder):
+
+    def __init__(self, d_in, d_out, wd=None, scope='linear'):
+        super(Linear, self).__init__()
+        self.d_in = d_in
+        self.d_out = d_out
+        self.wd = wd
+        self.scope = scope
+        pass
+
+    def init_var(self):
+        self.w = self.declare_var(
+            [self.d_in, self.d_out], name='w', wd=self.wd)
+        pass
+
+    def build(self, inp):
+        with tf.variable_scope(self.scope):
+            self.lazy_init_var()
+            x = self.get_single_input(inp)
+            return tf.matmul(x, self.w)
+
+    def get_save_var_dict(self):
+        return {
+            'w': self.w
+        }
+
+
 class DilatedConv2D(GraphBuilder):
     """Dilated 2D convolution."""
 
@@ -61,15 +119,19 @@ def max_pool(x, ratio):
 
 class MaxPool(GraphBuilder):
 
-    def __init__(self, ratio):
+    def __init__(self, kernel, stride=None):
         super(MaxPool, self).__init__()
-        self.ratio = ratio
+        self.kernel = kernel
+        if stride is None:
+            self.stride = kernel
+        else:
+            self.stride = stride
         pass
 
     def build(self, inp):
         x = self.get_single_input(inp)
-        return tf.nn.max_pool(x, ksize=[1, self.ratio, self.ratio, 1],
-                              strides=[1, self.ratio, self.ratio, 1],
+        return tf.nn.max_pool(x, ksize=[1, self.kernel, self.kernel, 1],
+                              strides=[1, self.stride, self.stride, 1],
                               padding='SAME')
 
 

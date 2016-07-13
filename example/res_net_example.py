@@ -15,6 +15,7 @@ import tfplus.data.cifar10
 tfplus.init('Train a simple ResNet on CIFAR-10')
 
 # Main options
+tfplus.cmd_args.add('batch_size', 'int', 100)
 tfplus.cmd_args.add('gpu', 'int', -1)
 tfplus.cmd_args.add('results', 'str', '../results')
 tfplus.cmd_args.add('logs', 'str', '../logs')
@@ -26,13 +27,13 @@ tfplus.cmd_args.add('restore_logs', 'str', None)
 tfplus.cmd_args.add('inp_height', 'int', 32)
 tfplus.cmd_args.add('inp_width', 'int', 32)
 tfplus.cmd_args.add('inp_depth', 'int', 3)
-tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9, 9])
-tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2, 2])
-tfplus.cmd_args.add('channels', 'list<int>', [16, 16, 32, 64, 64])
+tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9])
+tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2])
+tfplus.cmd_args.add('channels', 'list<int>', [16, 16, 32, 64])
 tfplus.cmd_args.add('bottleneck', 'bool', False)
-tfplus.cmd_args.add('learn_rate', 'float', 0.1)
+tfplus.cmd_args.add('learn_rate', 'float', 0.01)
 tfplus.cmd_args.add('learn_rate_decay', 'float', 0.1)
-tfplus.cmd_args.add('epochs_per_lr_decay', 'int', 80)
+tfplus.cmd_args.add('epochs_per_lr_decay', 'int', 12)
 tfplus.cmd_args.add('wd', 'float', 1e-4)
 
 
@@ -80,8 +81,14 @@ class ResNetExampleModel(tfplus.nn.Model):
         wd = self.get_option('wd')
         phase_train = self.get_input_var('phase_train')
 
-        self.conv = tfplus.nn.CNN([3], [inp_depth, channels[0]], [1], [None],
-                                  [True], wd=wd, scope='conv')
+        self.rnd_trans = tfplus.nn.ImageRandomTransform(
+            padding=4, # was 8 
+            rnd_hflip=True,
+            rnd_vflip=False,
+            rnd_transpose=False,
+            rnd_size=False)
+        self.conv = tfplus.nn.CNN([3], [inp_depth, channels[0]], [1],
+                                  [tf.nn.relu], [True], wd=wd, scope='conv')
         self.res_net = tfplus.nn.ResNet(layers=layers,
                                         bottleneck=bottleneck,
                                         channels=channels,
@@ -97,12 +104,13 @@ class ResNetExampleModel(tfplus.nn.Model):
         self.lazy_init_var()
         x = inp['x']
         phase_train = inp['phase_train']
+        x = self.rnd_trans({'input': x, 'phase_train': phase_train})['trans']
+        self.register_var('x_trans', x)
         channels = self.get_option('channels')
         strides = self.get_option('strides')
         h1 = self.conv({'input': x, 'phase_train': phase_train})
         hn = self.res_net({'input': h1, 'phase_train': phase_train})
         ratio = 32 / np.array(strides).prod()
-        print ratio
         hn = tfplus.nn.AvgPool(ratio)(hn)
         cnn_dim = channels[-1]
         hn = tf.reshape(hn, [-1, cnn_dim])
@@ -132,7 +140,7 @@ class ResNetExampleModel(tfplus.nn.Model):
         epochs_decay = self.get_option('epochs_per_lr_decay')
         num_ex = tf.shape(self.get_var('x'))[0]
         learn_rate = tf.train.exponential_decay(
-            learn_rate, self.global_step, 40000 * epochs_decay / num_ex,
+            learn_rate, self.global_step, 50000 * epochs_decay / num_ex,
             lr_decay, staircase=True)
         self.register_var('learn_rate', learn_rate)
         # optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
@@ -211,7 +219,8 @@ if __name__ == '__main__':
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_iter(data['train'].get_iter(batch_size=32, cycle=True))
+        .set_iter(data['train'].get_iter(batch_size=opt['batch_size'],
+                                         cycle=True))
         .set_phase_train(True)
         .set_num_batch(10)
         .set_interval(1))
@@ -226,26 +235,29 @@ if __name__ == '__main__':
         .add_csv_listener('Accuracy', 'acc', 'train')
         .add_cmd_listener('Accuracy', 'acc')
         .add_csv_listener('Learning Rate', 'learn_rate', 'train')
-        .set_iter(data['train'].get_iter(batch_size=32, cycle=True))
+        .set_iter(data['train'].get_iter(batch_size=opt['batch_size'],
+                                         cycle=True))
         .set_phase_train(False)
-        .set_num_batch(10)
+        .set_num_batch(3)
         .set_interval(10))
-     .add_runner(
+     .add_runner( # Full epoch evaluation on validation set.
         tfplus.runner.create_from_main('average')
         .set_name('valid')
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['test'].get_iter(batch_size=32, cycle=True))
+        .set_iter(data['test'].get_iter(batch_size=opt['batch_size'],
+                                        cycle=True))
         .set_phase_train(False)
-        .set_num_batch(10)
-        .set_interval(10))
+        .set_num_batch(data['test'].get_size() / opt['batch_size'])
+        .set_interval(100))
      .add_runner(
         tfplus.runner.create_from_main('basic')
         .set_name('plotter')
-        .set_outputs(['x_id'])
-        .add_plot_listener('Input', {'x_id': 'images'})
-        .set_iter(data['test'].get_iter(batch_size=32, stagnant=True))
+        .set_outputs(['x_trans'])
+        .add_plot_listener('Input', {'x_trans': 'images'})
+        .set_iter(data['test'].get_iter(batch_size=10,
+                                        stagnant=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass

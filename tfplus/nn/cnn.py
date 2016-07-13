@@ -8,7 +8,7 @@ from batch_norm import BatchNorm
 
 class CNN(GraphBuilder):
 
-    def __init__(self, f, ch, pool, act, use_bn, wd=None,
+    def __init__(self, f, ch, pool, act, use_bn, wd=None, use_stride=False,
                  scope='cnn', init_weights=None, frozen=None,
                  shared_weights=None):
         """Add CNN. N = number of layers.
