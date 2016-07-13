@@ -215,7 +215,7 @@ if __name__ == '__main__':
         dp = tfplus.data.create_from_main(DATASET, split=split).set_iter(
             batch_size=batch_size, cycle=cycle)
         if opt['prefetch']:
-            return tfplus.data.ConcurrentDataProvider(dp, max_queue_size=10)
+            return tfplus.data.ConcurrentDataProvider(dp, max_queue_size=30)
         else:
             return dp
 

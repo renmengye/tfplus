@@ -73,7 +73,6 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
         start_time = time.time()
         x = np.zeros([len(idx), 256, 256, 3], dtype='float32')
         y_gt = np.zeros([len(idx), 1000], dtype='float32')
-        print idx
         for kk, ii in enumerate(idx):
             if self.split == 'train':
                 folder = os.path.join('train', self.img_ids[ii].split('_')[0])
@@ -93,7 +92,6 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             'x': x,
             'y_gt': y_gt
         }
-        print results['y_gt']
         # self.log.info('Fetch data time: {:.4f} ms'.format(
         #               (time.time() - start_time) * 1000))
         return results

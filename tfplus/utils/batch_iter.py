@@ -35,9 +35,9 @@ class BatchIterator(object):
         self._cycle = cycle
         self._shuffle_idx = np.arange(self._num)
         self._shuffle = shuffle
+        self._random = np.random.RandomState(2)
         if self._shuffle:
             self._random.shuffle(self._shuffle_idx)
-        self._random = np.random.RandomState(2)
         self._stagnant = stagnant
         if progress_bar:
             self._pb = pb.get(self._num_steps)
