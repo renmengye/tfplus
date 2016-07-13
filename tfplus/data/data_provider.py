@@ -29,27 +29,46 @@ class DataProvider(OptionBase):
 
     def __init__(self):
         super(DataProvider, self).__init__()
+        self._variables = None
+        self._iterator = None
         pass
+
+    @property
+    def iterator(self):
+        return self._iterator
+
+    @property
+    def variables(self):
+        return self._variables
+
+    def set_variables(self, value):
+        self._variables = value
+        return self
 
     def get_size(self):
         """Get number of examples."""
         raise Exception('Not implemented')
 
-    def get_batch(self, idx, **kwargs):
+    def get_batch(self, **kwargs):
         """Get a batch of data.
+        """
+        return self.get_batch_idx(self.iterator.next(), **kwargs)
 
-        Args:
-            idx: numpy.ndarray of dtype int. 0-based index of data entries.
+    def get_batch_idx(self, idx, **kwargs):
+        """Get a batch of data.
         """
         raise Exception('Not implemented')
 
-    def get_iter(self, batch_size=1, progress_bar=False, cycle=False, shuffle=False, stagnant=False):
+    def set_iter(self, batch_size=1, progress_bar=False, cycle=False,
+                 shuffle=True, stagnant=False):
         """Get a batch iterator of data.
 
         Args:
             See BatchIterator.
         """
-        return BatchIterator(self.get_size(), batch_size=batch_size,
-                             progress_bar=progress_bar, get_fn=self.get_batch,
-                             cycle=cycle, shuffle=shuffle, stagnant=stagnant)
+        self._iterator = BatchIterator(
+            self.get_size(), batch_size=batch_size,
+            progress_bar=progress_bar,
+            cycle=cycle, shuffle=shuffle, stagnant=stagnant)
+        return self
     pass

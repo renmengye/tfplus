@@ -66,4 +66,9 @@ class BatchNorm(GraphBuilder):
     def get_shadow_ema(self):
         return self.ema.average(self.batch_mean), \
             self.ema.average(self.batch_var)
+
+    def get_save_var_dict(self):
+        ema_mean, ema_var = self.get_shadow_ema()
+        return {'beta': self.beta, 'gamma': self.gamma, 'ema_mean': ema_mean,
+                'ema_var': ema_var}
     pass

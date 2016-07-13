@@ -49,7 +49,7 @@ class GraphBuilder(object):
         return self._var_dict[name]
         
     def declare_var(self, shape, initializer=None, init_val=None, wd=None,
-                    name=None, trainable=True):
+                    name=None, trainable=True, stddev=0.01):
         """Initialize weights.
 
         Args:
@@ -57,7 +57,10 @@ class GraphBuilder(object):
             wd: weight decay
         """
         if initializer is None:
-            initializer = tf.truncated_normal_initializer(stddev=0.01)
+            if stddev > 0:
+                initializer = tf.truncated_normal_initializer(stddev=stddev)
+            else:
+                initializer = tf.constant_initializer(0.0)
         if init_val is None:
             var = tf.Variable(
                 initializer(shape), name=name, trainable=trainable)

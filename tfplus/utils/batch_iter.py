@@ -14,7 +14,7 @@ import progress_bar as pb
 
 class BatchIterator(object):
 
-    def __init__(self, num, batch_size=1, progress_bar=False, get_fn=None, cycle=False, shuffle=False, stagnant=False):
+    def __init__(self, num, batch_size=1, progress_bar=False, get_fn=None, cycle=False, shuffle=True, stagnant=False):
         """Construct a batch iterator.
 
         Args:
@@ -35,6 +35,8 @@ class BatchIterator(object):
         self._cycle = cycle
         self._shuffle_idx = np.arange(self._num)
         self._shuffle = shuffle
+        if self._shuffle:
+            self._random.shuffle(self._shuffle_idx)
         self._random = np.random.RandomState(2)
         self._stagnant = stagnant
         if progress_bar:

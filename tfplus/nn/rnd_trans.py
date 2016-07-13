@@ -10,14 +10,16 @@ import tensorflow as tf
 
 class ImageRandomTransform(GraphBuilder):
 
-    def __init__(self, padding, rnd_vflip=True, rnd_hflip=True,
-                 rnd_transpose=True, rnd_size=False, _debug=False):
+    def __init__(self, padding=0, rnd_vflip=True, rnd_hflip=True,
+                 rnd_transpose=True, rnd_size=False, shrink=0,
+                 _debug=False):
         super(ImageRandomTransform, self).__init__()
         self.padding = padding
         self.rnd_vflip = rnd_vflip
         self.rnd_hflip = rnd_hflip
         self.rnd_transpose = rnd_transpose
         self.rnd_size = rnd_size
+        self.shrink = shrink
         self._debug = _debug
         pass
 
@@ -27,7 +29,7 @@ class ImageRandomTransform(GraphBuilder):
         self.rand_t = tf.random_uniform(
             [1], 1.0 - float(self.rnd_transpose), 1.0)
         self.offset = tf.random_uniform(
-            [2], dtype='int32', maxval=self.padding * 2)
+            [2], dtype='int32', maxval=self.padding * 2 + self.shrink)
         if self._debug:
             self.offset = tf.Print(self.offset,
                                    ['Forward RND module', self.offset])
@@ -66,11 +68,15 @@ class ImageRandomTransform(GraphBuilder):
         phase_train_f = tf.to_float(phase_train)
 
         if axis == 3:
-            inp_height = xshape[1]
-            inp_width = xshape[2]
+            inp_height = xshape[1] - self.shrink
+            inp_width = xshape[2] - self.shrink
             # Add padding
-            x_pad = tf.pad(
-                x, [[0, 0], [padding, padding], [padding, padding], [0, 0]])
+            if self.padding > 0:
+                x_pad = tf.pad(
+                    x, [[0, 0], [padding, padding], [padding, padding],
+                        [0, 0]])
+            else:
+                x_pad = x
             # Random crop
             x_rand = tf.slice(x_pad, tf.pack([0, offset[0], offset[1], 0]),
                               tf.pack([-1, inp_height + offset2[0],
@@ -88,8 +94,12 @@ class ImageRandomTransform(GraphBuilder):
         elif axis == 1:
             inp_height = xshape[2]
             inp_width = xshape[3]
-            x_pad = tf.pad(
-                x, [[0, 0], [0, 0], [padding, padding], [padding, padding]])
+            if self.padding > 0:
+                x_pad = tf.pad(
+                    x, [[0, 0], [0, 0], [padding, padding],
+                        [padding, padding]])
+            else:
+                x_pad = x
             x_rand = tf.slice(x_pad, tf.pack([0, 0, offset[0], offset[1]]),
                               tf.pack([-1, -1, inp_height + offset2[0],
                                        inp_width + offset2[1]]))
@@ -114,7 +124,7 @@ class ImageRandomTransform(GraphBuilder):
             x_rand = tf.image.random_contrast(x_rand, 0.95, 1.05)
 
         x = (1.0 - phase_train_f) * x_ctr + phase_train_f * x_rand
-        return {'trans': x}
+        return x
     pass
 
 

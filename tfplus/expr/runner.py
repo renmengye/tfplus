@@ -32,6 +32,7 @@ class EmptyRunner(OptionBase):
         super(EmptyRunner, self).__init__()
         self._name = 'default'
         self._interval = 1
+        self._offset = 0
         self._experiment = None
         pass
 
@@ -62,6 +63,17 @@ class EmptyRunner(OptionBase):
     @property
     def interval(self):
         return self._interval
+
+    def get_offset(self):
+        return self._offset
+
+    def set_offset(self, value):
+        self._offset = value
+        return self
+
+    @property
+    def offset(self):
+        return self._offset
 
     def get_experiment(self):
         return self._experiment
@@ -142,7 +154,7 @@ class BasicRunner(SessionRunner):
     def __init__(self):
         super(BasicRunner, self).__init__()
         self._step = 0
-        self._iter = None
+        self._data_provider = None
         self._phase_train = True
         self._outputs = []
         self._current_batch = {}
@@ -216,14 +228,14 @@ class BasicRunner(SessionRunner):
         return self
 
     @property
-    def iter(self):
-        return self._iter
+    def data_provider(self):
+        return self._data_provider
 
-    def get_iter(self):
-        return self._iter
+    def get_data_provider(self):
+        return self._data_provider
 
-    def set_iter(self, value):
-        self._iter = value
+    def set_data_provider(self, value):
+        self._data_provider = value
         return self
 
     @property
@@ -284,11 +296,11 @@ class BasicRunner(SessionRunner):
                 pass
         if set_var:
             # Set a subset of variables.
-            if self.iter.variables is None:
-                self.iter.set_variables(
+            if self.data_provider.variables is None:
+                self.data_provider.set_variables(
                     self.model.get_all_input_vars().keys())
                 self.log.warning('Setting input variable list: {}'.format(
-                    self.iter.variables))
+                    self.data_provider.variables))
                 pass
             pass
         return feed_dict
@@ -304,7 +316,7 @@ class BasicRunner(SessionRunner):
 
     def run_step(self):
         try:
-            inp = self.iter.next()
+            inp = self.data_provider.get_batch()
         except StopIteration:
             return False
         results = self._run_step(inp)
@@ -350,7 +362,7 @@ class AverageRunner(BasicRunner):
         # Run each batch.
         for bb in xrange(self.num_batch):
             try:
-                inp = self.iter.next()
+                inp = self.data_provider.get_batch()
             except StopIteration:
                 return False
             _results = self._run_step(inp)

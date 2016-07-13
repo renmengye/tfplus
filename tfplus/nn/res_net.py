@@ -1,7 +1,10 @@
+from __future__ import division
+
 from graph_builder import GraphBuilder
 from batch_norm import BatchNorm
 from ops import Conv2D, DilatedConv2D, MaxPool, AvgPool
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -25,7 +28,7 @@ class ResNet(GraphBuilder):
 
     def __init__(self, layers, channels, strides, bottleneck=False,
                  dilation=False, wd=None, scope='res_net',
-                 shortcut='projection'):
+                 shortcut='projection', initialization='msra'):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -34,7 +37,7 @@ class ResNet(GraphBuilder):
         self.num_stage = len(layers)
         self.w = [None] * self.num_stage
         self.proj_w = [None] * self.num_stage
-        self.b = [None] * self.num_stage
+        # self.b = [None] * self.num_stage
         self.bottleneck = bottleneck
         self.dilation = dilation
         self.shortcut = shortcut
@@ -43,6 +46,10 @@ class ResNet(GraphBuilder):
             self.unit_depth = 3
         else:
             self.unit_depth = 2
+        if initialization == 'msra':
+            self.compute_std = lambda s: np.sqrt(2 / s[0] / s[1] / s[3])
+        else:
+            self.compute_std = lambda s: 0.01
         pass
 
     def compute_in_out(self, kk, ch_in, ch_out):
@@ -50,14 +57,14 @@ class ResNet(GraphBuilder):
             if kk == 0:
                 f_ = 1
                 ch_in_ = ch_in
-                ch_out_ = ch_out / 4
+                ch_out_ = int(ch_out / 4)
             elif kk == 1:
                 f_ = 3
-                ch_in_ = ch_out / 4
-                ch_out_ = ch_out / 4
+                ch_in_ = int(ch_out / 4)
+                ch_out_ = int(ch_out / 4)
             else:
                 f_ = 1
-                ch_in_ = ch_out / 4
+                ch_in_ = int(ch_out / 4)
                 ch_out_ = ch_out
         else:
             f_ = 3
@@ -92,18 +99,21 @@ class ResNet(GraphBuilder):
                 ch_out = self.channels[ii + 1]
                 with tf.variable_scope('stage_{}'.format(ii)):
                     self.w[ii] = [None] * self.layers[ii]
-                    self.b[ii] = [None] * self.layers[ii]
+                    # self.b[ii] = [None] * self.layers[ii]
                     for jj in xrange(self.layers[ii]):
                         if jj > 0:
                             ch_in = ch_out
                             pass
                         self.w[ii][jj] = [None] * self.unit_depth
-                        self.b[ii][jj] = [None] * self.unit_depth
+                        # self.b[ii][jj] = [None] * self.unit_depth
                         if ch_in != ch_out:
                             if self.shortcut == 'projection':
                                 self.proj_w[ii] = self.declare_var(
                                     [1, 1, ch_in, ch_out], wd=self.wd,
-                                    name='proj_w')
+                                    name='proj_w',
+                                    stddev=self.compute_std(
+                                        [1, 1, ch_in, ch_out])
+                                )
                                 pass
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
@@ -113,9 +123,17 @@ class ResNet(GraphBuilder):
                                         kk, ch_in, ch_out)
                                     self.w[ii][jj][kk] = self.declare_var(
                                         [f_, f_, ch_in_, ch_out_], wd=self.wd,
-                                        name='w')
-                                    self.b[ii][jj][kk] = self.declare_var(
-                                        [ch_out_], wd=self.wd, name='b')
+                                        name='w',
+                                        stddev=self.compute_std(
+                                            [f_, f_, ch_in, ch_out])
+                                    )
+                                    self.log.info('Init SD: {}'.format(
+                                        self.compute_std(
+                                            [f_, f_, ch_in, ch_out])))
+                                    # self.b[ii][jj][kk] = self.declare_var(
+                                    #     [ch_out_], name='b',
+                                    #     stddev=0
+                                    # )
                                 self.log.info('Filter: {}'.format(
                                     [f_, f_, ch_in_, ch_out_]))
                                 self.log.info('Weights: {}'.format(
@@ -172,13 +190,19 @@ class ResNet(GraphBuilder):
                                          'phase_train': phase_train})
                                     h = tf.nn.relu(h)
                                     if self.dilation:
+                                        # h = DilatedConv2D(
+                                        #     self.w[ii][jj][kk], rate=s)(
+                                        #     h) + self.b[ii][jj][kk]
                                         h = DilatedConv2D(
                                             self.w[ii][jj][kk], rate=s)(
-                                            h) + self.b[ii][jj][kk]
+                                            h)
                                     else:
+                                        # h = Conv2D(self.w[ii][jj][kk],
+                                        #            stride=s)(
+                                        #     h) + self.b[ii][jj][kk]
                                         h = Conv2D(self.w[ii][jj][kk],
                                                    stride=s)(
-                                            h) + self.b[ii][jj][kk]
+                                            h)
                                     self.log.info('Unit {} shape: {}'.format(
                                         kk, h.get_shape()))
                                     pass
@@ -209,15 +233,11 @@ class ResNet(GraphBuilder):
                 for kk in xrange(self.unit_depth):
                     prefix = 'stage_{}/layer_{}/unit_{}/'.format(ii, jj, kk)
                     results[prefix + 'w'] = self.w[ii][jj][kk]
-                    results[prefix + 'b'] = self.b[ii][jj][kk]
+                    # results[prefix + 'b'] = self.b[ii][jj][kk]
                     bn = self.bn[ii][jj][kk]
                     if bn is not None:
-                        results[prefix + 'bn/beta'] = bn.beta
-                        results[prefix + 'bn/gamma'] = bn.gamma
-                        ema_mean, ema_var = bn.get_shadow_ema()
-                        results[prefix + 'bn/ema_mean'] = ema_mean
-                        results[prefix + 'bn/ema_var'] = ema_var
-                        pass
+                        self.add_prefix_to(
+                            prefix + 'bn', bn.get_save_var_dict(), results)
                     pass
                 pass
             pass

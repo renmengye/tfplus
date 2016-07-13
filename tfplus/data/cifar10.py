@@ -51,12 +51,12 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
                 _data = pkl.load(fo)
                 self._images = _data['data'].reshape(
                     [10000, 3, 32, 32]).transpose([0, 2, 3, 1])
-                print _data.keys()
                 self._labels = np.array(_data['labels'])
             pass
         else:
             raise Exception('Unknown split: {}'.format(self.split))
-        self._images = (self._images / 255).astype('float32')
+        # self._images = (self._images / 255).astype('float32')
+        self._images = self._images.astype('float32')
         if self.split == 'train':
             self._pixel_mean = self._images.mean(axis=0)
         else:
@@ -71,9 +71,11 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
                     _data = pkl.load(fo)
                     _images[start: end] = _data['data'].reshape(
                         [10000, 3, 32, 32]).transpose([0, 2, 3, 1])
-            self._pixel_mean = (_images / 255).astype('float32').mean(axis=0)
+            # self._pixel_mean = (_images / 255).astype('float32').mean(axis=0)
+            self._pixel_mean = _images.astype('float32').mean(axis=0)
             _images = None
         self._images = self._images - self._pixel_mean
+        # self._images = self._images / 255
         pass
 
     def get_size(self):
@@ -84,7 +86,7 @@ class CIFAR10DataProvider(tfplus.data.data_provider.DataProvider):
         else:
             raise Exception('Unknown split {}'.format(self.split))
 
-    def get_batch(self, idx, **kwargs):
+    def get_batch_idx(self, idx, **kwargs):
         if self._images is None:
             self.init_data()
         labels = self._labels[idx]

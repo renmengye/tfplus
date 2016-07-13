@@ -1,5 +1,8 @@
+from __future__ import division
+
 from graph_builder import GraphBuilder
 
+import numpy as np
 import tensorflow as tf
 
 from ops import Conv2D, MaxPool
@@ -10,7 +13,7 @@ class CNN(GraphBuilder):
 
     def __init__(self, f, ch, pool, act, use_bn, wd=None, use_stride=False,
                  scope='cnn', init_weights=None, frozen=None,
-                 shared_weights=None):
+                 shared_weights=None, initialization='msra'):
         """Add CNN. N = number of layers.
 
         Args:
@@ -37,6 +40,10 @@ class CNN(GraphBuilder):
         self.b = [None] * self.nlayers
         self.batch_norm = [None] * self.nlayers
         self.num_copies = 0
+        if initialization == 'msra':
+            self.compute_std = lambda s: np.sqrt(2 / s[0] * s[1] * s[3])
+        else:
+            self.compute_std = lambda s: 0.01
 
         super(CNN, self).__init__()
 
@@ -82,11 +89,16 @@ class CNN(GraphBuilder):
                             [f[ii], f[ii], ch[ii], ch[ii + 1]],
                             name='w',
                             init_val=init_val_w, wd=wd,
-                            trainable=trainable)
+                            trainable=trainable,
+                            stddev=self.compute_std(
+                                [f[ii], f[ii], ch[ii], ch[ii + 1]])
+                        )
                         self.b[ii] = self.declare_var(
                             [ch[ii + 1]], init_val=init_val_b,
                             name='b',
-                            trainable=trainable)
+                            trainable=trainable,
+                            stddev=0
+                        )
 
                     self.log.info('Filter: {}, Trainable: {}'.format(
                         [f[ii], f[ii], ch[ii], ch[ii + 1]], trainable))

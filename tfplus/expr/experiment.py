@@ -181,7 +181,7 @@ class TrainExperiment(Experiment):
 
             # Runners
             for name, runner in self.runners.items():
-                if count % runner.interval == 0:
+                if count % runner.interval == 0 and count > runner.offset:
                     if runner.interval > 1:
                         self.log.info('Runner "{}"'.format(name))
                         pass
@@ -203,11 +203,6 @@ class TrainExperiment(Experiment):
             pass
 
         self.session.close()
-
-        for logger in self.loggers.itervalues():
-            logger.close()
-            pass
-        pass
     pass
 
 get_factory().register('train', TrainExperiment)

@@ -139,7 +139,7 @@ class MNISTDataProvider(data_provider.DataProvider):
         self.log.info('Dataset size: {}'.format(size))
         return size
 
-    def get_batch(self, idx, **kwargs):
+    def get_batch_idx(self, idx, **kwargs):
         """Return the next `batch_size` examples from this data set."""
         if self._images is None:
             self.init_data()

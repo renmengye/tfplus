@@ -167,10 +167,9 @@ if __name__ == '__main__':
              .restore_weights_aux_from(sess, opt['restore_model']))
 
     # Initialize data.
-    data = {}
-    for split in ['train', 'valid']:
-        data[split] = tfplus.data.create_from_main('mnist', split=split)
-        pass
+    def get_data(split, batch_size=100, cycle=True):
+        return tfplus.data.create_from_main('mnist', split=split).set_iter(
+            batch_size=100, cycle=True)
 
     # Initialize experiment.
     (tfplus.experiment.create_from_main('train')
@@ -192,7 +191,7 @@ if __name__ == '__main__':
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_iter(data['train'].get_iter(batch_size=100, cycle=True))
+        .set_data_provider(get_data('train', batch_size=100, cycle=True))
         .set_phase_train(True)
         .set_num_batch(100)
         .set_interval(1))
@@ -206,7 +205,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'train')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['train'].get_iter(batch_size=100, cycle=True))
+        .set_data_provider(get_data('train', batch_size=100, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -216,7 +215,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_iter(data['valid'].get_iter(batch_size=100, cycle=True))
+        .set_data_provider(get_data('valid', batch_size=100, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -225,7 +224,7 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_id'])
         .add_plot_listener('Input', {'x_id': 'images'})
-        .set_iter(data['valid'].get_iter(batch_size=10, stagnant=True))
+        .set_data_provider(get_data('valid', batch_size=10, cycle=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass

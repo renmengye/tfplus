@@ -1,5 +1,8 @@
+from __future__ import division
+
 from graph_builder import GraphBuilder
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -36,7 +39,8 @@ class Conv2D(GraphBuilder):
 
 class Conv2DW(GraphBuilder):
 
-    def __init__(self, f, ch_in, ch_out, stride=1, wd=None, scope='conv'):
+    def __init__(self, f, ch_in, ch_out, stride=1, wd=None, scope='conv',
+                 initialization='msra', bias=True):
         super(Conv2DW, self).__init__()
         self.stride = stride
         self.f = f
@@ -44,51 +48,71 @@ class Conv2DW(GraphBuilder):
         self.ch_out = ch_out
         self.scope = scope
         self.wd = wd
+        self.bias = bias
+        if initialization == 'msra':
+            self.compute_std = lambda s: np.sqrt(2 / s[0] / s[1] / s[3])
+        else:
+            self.compute_std = lambda s: 0.01
         pass
 
     def init_var(self):
         self.w = self.declare_var(
-            [self.f, self.f, self.ch_in, self.ch_out], name='w', wd=self.wd)
+            [self.f, self.f, self.ch_in, self.ch_out], name='w', wd=self.wd,
+            stddev=self.compute_std([self.f, self.f, self.ch_in, self.ch_out]))
+        if self.bias:
+            self.b = self.declare_var([self.ch_out], name='b', stddev=0)
         pass
 
     def build(self, inp):
         with tf.variable_scope(self.scope):
             self.lazy_init_var()
             x = self.get_single_input(inp)
-            return tf.nn.conv2d(x, self.w,
-                                strides=[1, self.stride, self.stride, 1],
-                                padding='SAME')
+            h = tf.nn.conv2d(x, self.w,
+                             strides=[1, self.stride, self.stride, 1],
+                             padding='SAME')
+            if self.bias:
+                h = h + self.b
+        return h
 
     def get_save_var_dict(self):
-        return {
-            'w': self.w
-        }
+        results = {'w': self.w}
+        if self.bias:
+            results['b'] = self.b
+            pass
+        return results
 
 
 class Linear(GraphBuilder):
 
-    def __init__(self, d_in, d_out, wd=None, scope='linear'):
+    def __init__(self, d_in, d_out, wd=None, scope='linear', bias=True):
         super(Linear, self).__init__()
         self.d_in = d_in
         self.d_out = d_out
         self.wd = wd
         self.scope = scope
+        self.bias = bias
         pass
 
     def init_var(self):
         self.w = self.declare_var(
             [self.d_in, self.d_out], name='w', wd=self.wd)
+        if self.bias:
+            self.b = self.declare_var([self.d_out], name='b', wd=self.wd)
         pass
 
     def build(self, inp):
         with tf.variable_scope(self.scope):
             self.lazy_init_var()
             x = self.get_single_input(inp)
-            return tf.matmul(x, self.w)
+            h = tf.matmul(x, self.w)
+            if self.bias:
+                h = h + self.b
+            return h
 
     def get_save_var_dict(self):
         return {
-            'w': self.w
+            'w': self.w,
+            'b': self.b
         }
 
 
