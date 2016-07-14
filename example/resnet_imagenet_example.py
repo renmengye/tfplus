@@ -242,7 +242,7 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('saver')
         .set_name('saver')
-        .set_interval(1))    # Every 1000 steps
+        .set_interval(100))    # Every 1000 steps
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('trainval')
