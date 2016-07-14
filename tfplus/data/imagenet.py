@@ -1,5 +1,5 @@
-# import sys
-# sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
+import sys
+sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
 import tfplus
 import os
 import numpy as np
@@ -111,3 +111,6 @@ if __name__ == '__main__':
     print labels.max()
     print labels.min()
     print len(labels)
+    img_ids = ImageNetDataProvider(split='valid').img_ids
+    print img_ids[0]
+    print img_ids[-1]
