@@ -45,6 +45,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
                         [synset.get_index(ff)] * len(image_fnames))
             elif self.split == 'valid' or self.split == 'test':
                 self._img_ids = os.listdir(image_folder)
+                self._img_ids = sorted(self._img_ids)
                 if self.split == 'valid':
                     self._labels = []
                     with open(os.path.join(
