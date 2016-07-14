@@ -175,12 +175,6 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         self.log.info('Save variable list:')
         [self.log.info((v[0], v[1].name)) for v in results.items()]
         return results
-
-    def get_aux_var_dict(self):
-        results = super(ConvNetExampleModel, self).get_aux_var_dict()
-        self.log.info('Aux variable list:')
-        [self.log.info(v) for v in results.items()]
-        return results
     pass
 
 
