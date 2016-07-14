@@ -10,6 +10,8 @@ class ResNetImageNetModel(tfplus.nn.ContainerModel):
 
     def __init__(self, nlayers=None):
         self.nlayers = nlayers
+        self._img_mean = np.array(
+            [103.062623801, 115.902882574, 123.151630838], dtype='float32')
         super(ResNetImageNetModel, self).__init__()
         pass
 
@@ -71,6 +73,7 @@ class ResNetImageNetModel(tfplus.nn.ContainerModel):
         self.lazy_init_var()
         x = inp['x']
         phase_train = inp['phase_train']
+        x = x - self._img_mean
         # x = tf.Print(x, [tf.reduce_mean(x)])
         h = self.conv1(x)
         # h = tf.Print(h, [tf.reduce_mean(h), tf.reduce_sum(h),

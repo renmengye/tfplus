@@ -17,8 +17,6 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
         self._folder = folder
         self._img_ids = None
         self._labels = None
-        self._img_mean = np.array(
-            [103.062623801, 115.902882574, 123.151630838])
         pass
 
     @property
@@ -87,7 +85,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             x[kk] = x_
             y_gt[kk, self.labels[ii]] = 1.0
         # print 'Mean', x.mean()
-        x = x - self._img_mean
+        # x = x - self._img_mean
         # print 'Mean - mean', x.mean()
         results = {
             'x': x,

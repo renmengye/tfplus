@@ -244,7 +244,7 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('saver')
         .set_name('saver')
-        .set_interval(100))
+        .set_interval(100))   # Every 1000 steps
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('trainval')
@@ -257,7 +257,7 @@ if __name__ == '__main__':
         .set_phase_train(False)
         .set_num_batch(3)
         .set_offset(100)
-        .set_interval(10))
+        .set_interval(10))   # Every 100 steps
      .add_runner(  # Full epoch evaluation on validation set.
         tfplus.runner.create_from_main('average')
         .set_name('valid')
@@ -269,7 +269,7 @@ if __name__ == '__main__':
         .set_phase_train(False)
         .set_num_batch(10000 / opt['batch_size'])
         .set_offset(100)
-        .set_interval(100))
+        .set_interval(100)) # Every 1000 steps, full epoch eval
      .add_runner(
         tfplus.runner.create_from_main('basic')
         .set_name('plotter')
