@@ -1,5 +1,6 @@
 import cslab_environ
 
+import numpy as np
 import tfplus
 import tensorflow as tf
 
