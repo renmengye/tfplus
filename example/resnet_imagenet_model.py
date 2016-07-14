@@ -101,7 +101,7 @@ class ResNetImageNetModel(tfplus.nn.ContainerModel):
         results = {}
         if self.has_var('step'):
             results['step'] = self.get_var('step')
-        self.add_prefix_to('conv1', self.conv.get_save_var_dict(), results)
+        self.add_prefix_to('conv1', self.conv1.get_save_var_dict(), results)
         self.add_prefix_to('bn1', self.bn1.get_save_var_dict(), results)
         self.add_prefix_to(
             'res_net', self.res_net.get_save_var_dict(), results)
