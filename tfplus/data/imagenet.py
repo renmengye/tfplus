@@ -1,5 +1,5 @@
-import sys
-sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
+# import sys
+# sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
 import tfplus
 import os
 import numpy as np
