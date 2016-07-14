@@ -82,7 +82,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             x_ = cv2.imread(img_fname)
             x_ = cv2.resize(x_, (256, 256), interpolation=cv2.INTER_CUBIC)
             # print x_.mean()
-            x[kk] = x_.astype('float32')
+            x[kk] = x_
             y_gt[kk, self.labels[ii]] = 1.0
         # print 'Mean', x.mean()
         # x = x - self._img_mean
