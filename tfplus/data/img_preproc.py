@@ -30,7 +30,7 @@ class ImagePreprocessor(object):
                 image_out, max_delta=32. / 255.)
             image_out = tf.image.random_saturation(
                 image_out, lower=0.5, upper=1.5)
-            image_out = tf.image.random_hue(image_out, max_delta=0.2)
+            image_out = tf.image.random_hue(image_out, max_delta=0.1)
             image_out = tf.image.random_contrast(
                 image_out, lower=0.5, upper=1.5)
             image_out = tf.clip_by_value(image_out, 0.0, 1.0)

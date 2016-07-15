@@ -355,8 +355,10 @@ class Model(GraphBuilder, OptionBase):
 
     def get_aux_var_dict(self):
         all_vars = self.get_all_vars()
-        save_vars = self.get_save_var_dict()
-        save_var_set = set(save_vars.values())
+        all_save_vars = self.get_save_var_list_recursive()
+        save_var_set = set(all_save_vars)
+        print 'Save var length', len(save_var_set)
+        print 'All var length', len(all_vars)
         aux_vars = {}
         for v in all_vars:
             if v not in save_var_set:
