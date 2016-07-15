@@ -41,6 +41,7 @@ class ImagePreprocessor(object):
             self._rnd_resize[0], self._rnd_resize[1]))
         short = min(width, height)
         lon = max(width, height)
+        print (width, height)
         print self.siz
         if width < height:
             ratio = self.siz / width
