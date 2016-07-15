@@ -445,15 +445,3 @@ class ContainerModel(Model):
             save_vars.extend(m.get_save_var_list_recursive())
         save_vars.extend(self.get_save_var_dict().values())
         return save_vars
-
-    def get_aux_var_dict(self):
-        all_vars = self.get_all_vars()
-        all_save_vars = self.get_save_var_list_recursive()
-        save_var_set = set(all_save_vars)
-        aux_vars = {}
-        for v in all_vars:
-            if v not in save_var_set:
-                aux_vars[v.name] = v
-                pass
-            pass
-        return aux_vars
