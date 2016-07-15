@@ -1,3 +1,5 @@
+from __future__ import division
+
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -35,12 +37,22 @@ class ImagePreprocessor(object):
             image_out = tf.clip_by_value(image_out, 0.0, 1.0)
         return image_in, image_out
 
-    def redraw(self):
+    def redraw(self, height, width):
         self.siz = int(self._random.uniform(
             self._rnd_resize[0], self._rnd_resize[1]))
+        short = min(width, height)
+        lon = max(width, height)
+        if width < height:
+            ratio = self.siz / width
+            self.siz2 = (self.siz, height * ratio)
+        else:
+            ratio = self.siz / height
+            self.siz2 = (width * ratio, height)
         self.offset = [0.0, 0.0]
-        self.offset[0] = int(self._random.uniform(0.0, self.siz - self._crop))
-        self.offset[1] = int(self._random.uniform(0.0, self.siz - self._crop))
+        self.offset[0] = int(self._random.uniform(
+            0.0, self.siz2[0] - self._crop))
+        self.offset[1] = int(self._random.uniform(
+            0.0, self.siz2[1] - self._crop))
         self.hflip = bool(self._random.uniform(0, 1))
         pass
 
@@ -51,14 +63,14 @@ class ImagePreprocessor(object):
         horizontal flipping. Random colours have to be redrawn.
         """
         if redraw:
-            self.redraw()
+            self.redraw(height=image.shape[0], width=image.shape[1])
 
         if rnd:
-            siz = self.siz
+            siz2 = self.siz2
             offset = self.offset
             hflip = self.hflip and self._rnd_hflip
         else:
-            siz = self._resize
+            siz2 = (self._resize, self._resize)
             offset = (self._rnd_resize[0] - self._crop) / 2
             offset = [offset, offset]
             hflip = False
