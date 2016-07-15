@@ -47,7 +47,7 @@ tfplus.cmd_args.add('optimizer', 'str', 'momentum')
 tfplus.cmd_args.add('wd', 'float', 1e-4)
 
 
-class ResNetImageNetModelWrapper(tfplus.nn.Model):
+class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
 
     def __init__(self, name='resnet_imagenet_example'):
         super(ResNetImageNetModelWrapper, self).__init__(name=name)
@@ -64,6 +64,8 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         self.register_option('momentum')
         self.register_option('optimizer')
         self.register_option('wd')
+        self.res_net = ResNetImageNetModel()
+        self.add_sub_model(self.res_net)
         pass
 
     def init_default_options(self):
@@ -96,13 +98,6 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         shortcut = self.get_option('shortcut')
         wd = self.get_option('wd')
         phase_train = self.get_input_var('phase_train')
-
-        # self.rnd_trans = tfplus.nn.ImageRandomTransform(
-        #     rnd_hflip=True,
-        #     rnd_vflip=False,
-        #     rnd_transpose=False,
-        #     rnd_size=False)
-        self.res_net = ResNetImageNetModel()
         self.res_net.set_all_options({
             'inp_depth': inp_depth,
             'layers': layers,
@@ -119,11 +114,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         self.lazy_init_var()
         x = inp['x']
         phase_train = inp['phase_train']
-        # x = tf.Print(x, [tf.reduce_mean(x)])
-        # x = self.rnd_trans(
-        #     {'input': x, 'phase_train': phase_train, 'rnd_colour': True})
         x = tf.identity(x)
-        # x = tf.Print(x, [tf.reduce_mean(x)])
         self.register_var('x_trans', x)
         y_out = self.res_net({'x': x, 'phase_train': phase_train})
         self.register_var('y_out', y_out)
@@ -174,10 +165,10 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         results = {}
         if self.has_var('step'):
             results['step'] = self.get_var('step')
-        self.add_prefix_to(None, self.res_net.get_save_var_dict(), results)
-        self.log.info('Save variable list:')
-        [self.log.info((v[0], v[1].name)) for v in results.items()]
-        return results
+        # self.add_prefix_to(None, self.res_net.get_save_var_dict(), results)
+        # self.log.info('Save variable list:')
+        # [self.log.info((v[0], v[1].name)) for v in results.items()]
+        # return results
     pass
 
 

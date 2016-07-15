@@ -70,45 +70,28 @@ class ResNetImageNetModel(tfplus.nn.ContainerModel):
         }
 
     def build(self, inp):
-        channels = self.get_option('channels')
         self.lazy_init_var()
         x = inp['x']
         phase_train = inp['phase_train']
-        # x = tf.Print(x, [tf.reduce_mean(x)])
         subtract_mean = self.get_option('subtract_mean')
         if subtract_mean:
-            x = x - self._img_mean  # raw 0-255 values.    
-            # with open("data/ResNet_mean.binaryproto", mode='rb') as f:
-            #     data = f.read()
-            #     blob = caffe_pb2.BlobProto()
-            #     blob.ParseFromString(data)
-            #     mean_bgr = caffe.io.blobproto_to_array(blob)[0]
-            #     assert mean_bgr.shape == (3, 224, 224)
+            x = x - self._img_mean  # raw 0-255 values.
         else:
             x = x * 2.0 - 1.0       # center at [-1, 1].
         self.register_var('_minus0', x)
         h = self.conv1(x)
-        # h = tf.Print(h, [tf.reduce_mean(h), tf.reduce_sum(h),
-        #                    tf.reduce_mean(self.conv1.w)])
-        self.register_var('_conv0', h)
         self.bn1 = BatchNorm(h.get_shape()[-1])
         h = self.bn1({'input': h, 'phase_train': phase_train})
         h = tf.nn.relu(h)
-        self.register_var('_relu0', h)
         h = MaxPool(3, stride=2)(h)
         self.log.info('Before ResNet shape: {}'.format(h.get_shape()))
-        # h = tf.Print(h, [tf.reduce_mean(h), 0.0])
         h = self.res_net({'input': h, 'phase_train': phase_train})
-        # h = tf.Print(h, [tf.reduce_mean(h), 1.0])
         self.log.info('Before AvgPool shape: {}'.format(h.get_shape()))
-        h = AvgPool(7)(h)
-        # h = tf.Print(h, [tf.reduce_mean(h), 2.0])
-        h = tf.reshape(h, [-1, channels[-1]])
+        h = tf.reduce_mean(h, [1, 2])
         self.log.info('Before FC shape: {}'.format(h.get_shape()))
         y_out = self.fc(h)
         y_out = tf.nn.softmax(y_out)
         self.register_var('_y_out', y_out)
-        # y_out = tf.Print(y_out, [tf.reduce_mean(y_out), 3.0])
         return y_out
 
     def get_save_var_dict(self):
@@ -120,8 +103,6 @@ class ResNetImageNetModel(tfplus.nn.ContainerModel):
         self.add_prefix_to(
             'res_net', self.res_net.get_save_var_dict(), results)
         self.add_prefix_to('fc', self.fc.get_save_var_dict(), results)
-        # self.log.info('Save variable list:')
-        # [self.log.info((v[0], v[1].name)) for v in results.items()]
         return results
 
     pass

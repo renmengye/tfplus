@@ -115,6 +115,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
                 offset = [0, 0]
                 offset[0] = int(self._random.uniform(siz - self._crop))
                 offset[1] = int(self._random.uniform(siz - self._crop))
+                print offset[0], offset[1]
             elif self._mode == 'valid':
                 siz = 256
                 offset = (self._rnd_resize[0] - self._crop) / 2
