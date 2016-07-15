@@ -59,6 +59,8 @@ class ImagePreprocessor(object):
         redraw: Whether to redraw random numbers used for random cropping, and
         horizontal flipping. Random colours have to be redrawn.
         """
+        # BGR => RGB
+        image = image[:, :, [2, 1, 0]]
         image = (image / 255).astype('float32')
         width = image.shape[1]
         height = image.shape[0]
@@ -96,5 +98,6 @@ class ImagePreprocessor(object):
         if rnd and self._rnd_colour and image.shape[-1] == 3:
             image = self._sess.run(self._image_out, feed_dict={
                 self._image_in: image})
-
+        # RGB => BGR
+        image = image[:, :, [2, 1, 0]]
         return image

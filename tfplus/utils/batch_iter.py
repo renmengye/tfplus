@@ -10,6 +10,7 @@ Usage:
 
 import numpy as np
 import progress_bar as pb
+import threading
 
 
 class BatchIterator(object):
@@ -36,12 +37,12 @@ class BatchIterator(object):
         self._shuffle_idx = np.arange(self._num)
         self._shuffle = shuffle
         self._random = np.random.RandomState(2)
-        if self._shuffle:
-            self._random.shuffle(self._shuffle_idx)
+        self._shuffle_flag = shuffle
         self._stagnant = stagnant
         if progress_bar:
             self._pb = pb.get(self._num_steps)
             pass
+        self._mutex = threading.Lock()
         pass
 
     def __iter__(self):
@@ -69,29 +70,41 @@ class BatchIterator(object):
 
     def next(self):
         """Iterate next element."""
-        if self._pb:
-            self._pb.increment()
-        if not self._cycle:
-            if self._step < self._num_steps:
-                start = self._batch_size * self._step
-                end = min(self._num, self._batch_size * (self._step + 1))
-                if not self._stagnant:
-                    self._step += 1
-                idx = np.arange(start, end)
-                if self._shuffle:
-                    idx = self._shuffle_idx[idx]
-                if self.get_fn:
-                    return self.get_fn(idx)
-                else:
-                    return idx
-            else:
-                raise StopIteration()
-        else:
-            start = (self._batch_size * self._step) % self._num
-            end = (self._batch_size * (self._step + 1)) % self._num
+        self._mutex.acquire()
+        try:
+            # Shuffle data.
+            if self._shuffle_flag:
+                self._random.shuffle(self._shuffle_idx)
+                self._shuffle_flag = False
+
+            # Read/write of self._step stay in a thread-safe block.
+            if not self._cycle:
+                if self._step >= self._num_steps:
+                    raise StopIteration()
+
+            # Calc start/end based on current step.
+            start = self._batch_size * self._step
+            end = min(self._num, self._batch_size * (self._step + 1))
+
+            # Progress bar.
+            if self._pb is not None:
+                self._pb.increment()
+
+            # Increment step.
             if not self._stagnant:
                 self._step += 1
+        finally:
+            self._mutex.release()
 
+        if not self._cycle:
+            idx = np.arange(start, end)
+            if self.get_fn is not None:
+                return self.get_fn(idx)
+            else:
+                return idx
+        else:
+            start = start % self._num
+            end = end % self._num
             if end > start:
                 idx = np.arange(start, end)
                 idx = self._shuffle_idx[idx]
@@ -100,13 +113,13 @@ class BatchIterator(object):
                 idx = self._shuffle_idx[idx]
                 # Shuffle every cycle.
                 if self._shuffle:
-                    self._random.shuffle(self._shuffle_idx)
-            if self.get_fn:
+                    self._shuffle_flag = True
+            if self.get_fn is not None:
                 return self.get_fn(idx)
             else:
                 return idx
         pass
 
-
-# for ii in BatchIterator(400, batch_size=32, progress_bar=True, get_fn=lambda x: x, cycle=False):
+# if __name__ == '__main__':
+# for ii in BatchIterator(400, batch_size=32, progress_bar=True, get_fn=lambda x: x, cycle=False, shuffle=False):
 #     print ii
