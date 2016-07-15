@@ -237,7 +237,7 @@ if __name__ == '__main__':
                                     max_queue_size=10, num_threads=5))
         .set_phase_train(True)
         .set_offset(0)       # Every 500 steps (10 min)
-        .set_interval(50))
+        .set_interval(1))
      .add_runner(
         tfplus.runner.create_from_main('basic')
         .set_name('plotter_valid')
@@ -247,7 +247,7 @@ if __name__ == '__main__':
                                     max_queue_size=10, num_threads=5))
         .set_phase_train(False)
         .set_offset(0)       # Every 500 steps (10 min)
-        .set_interval(50))
+        .set_interval(1))
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('train')
