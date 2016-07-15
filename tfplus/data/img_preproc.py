@@ -63,23 +63,36 @@ class ImagePreprocessor(object):
         redraw: Whether to redraw random numbers used for random cropping, and
         horizontal flipping. Random colours have to be redrawn.
         """
+        width = image.shape[1]
+        height = image.shape[0]
         if redraw:
-            self.redraw(height=image.shape[0], width=image.shape[1])
+            self.redraw(height=height, width=width)
 
         if rnd:
             siz2 = self.siz2
             offset = self.offset
             hflip = self.hflip and self._rnd_hflip
         else:
+            siz = self._resize
+            short = min(width, height)
+            lon = max(width, height)
+            if width < height:
+                ratio = self.siz / width
+                siz2 = (siz, int(height / ratio))
+            else:
+                ratio = self.siz / height
+                siz2 = (int(width / ratio), siz)
+
             siz2 = (self._resize, self._resize)
-            offset = (self._rnd_resize[0] - self._crop) / 2
-            offset = [offset, offset]
+            offset = [0, 0]
+            offset[0] = int((siz2[0] - self._crop) / 2)
+            offset[0] = int((siz2[1] - self._crop) / 2)
             hflip = False
 
         image = cv2.resize(image, siz2, interpolation=cv2.INTER_CUBIC)
         print '1', image.shape
-        image = image[offset[0]: self._crop + offset[0],
-                      offset[1]: self._crop + offset[1], :]
+        image = image[offset[1]: self._crop + offset[1],
+                      offset[0]: self._crop + offset[0], :]
         print 'A', image.shape
 
         if hflip:
