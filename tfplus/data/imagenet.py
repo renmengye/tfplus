@@ -113,7 +113,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             # print img_fname
             x_ = cv2.imread(img_fname)
             rnd = self._mode == 'train'
-            x_ self._rnd_proc.process(x_, rnd=rnd)
+            x_ = self._rnd_proc.process(x_, rnd=rnd)
             # if self._mode == 'train':
             #     siz = int(self._random.uniform(
             #         self._rnd_resize[0], self._rnd_resize[1]))
