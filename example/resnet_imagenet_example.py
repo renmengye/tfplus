@@ -138,7 +138,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
 
         ans = tf.argmax(y_gt, 1)
         correct = tf.equal(ans, tf.argmax(y_out, 1))
-        top5_acc = tf.nn.in_top_k(y_out, ans, 5)
+        top5_acc = tf.reduce_sum(tf.nn.in_top_k(y_out, ans, 5)) / num_ex_f
         self.register_var('top5_acc', top5_acc)
         acc = tf.reduce_sum(tf.to_float(correct)) / num_ex_f
         self.register_var('acc', acc)
@@ -223,7 +223,8 @@ if __name__ == '__main__':
      .set_localhost(opt['localhost'])
      .restore_logs(opt['restore_logs'])
      .add_csv_output('Loss', ['train'])
-     .add_csv_output('Accuracy', ['train', 'valid'])
+     .add_csv_output('Top 1 Accuracy', ['train', 'valid'])
+     .add_csv_output('Top 5 Accuracy', ['train', 'valid'])
      .add_csv_output('Step Time', ['train'])
      .add_csv_output('Learning Rate', ['train'])
      .add_plot_output('Input (Train)', 'thumbnail', max_num_col=5)
@@ -269,9 +270,11 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('trainval')
-        .set_outputs(['acc', 'learn_rate'])
-        .add_csv_listener('Accuracy', 'acc', 'train')
-        .add_cmd_listener('Accuracy', 'acc')
+        .set_outputs(['acc', 'top5_acc', 'learn_rate'])
+        .add_csv_listener('Top 1 Accuracy', 'acc', 'train')
+        .add_cmd_listener('Top 1 Accuracy', 'acc')
+        .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'train')
+        .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
         .add_csv_listener('Learning Rate', 'learn_rate', 'train')
         .set_data_provider(get_data('train', batch_size=opt['batch_size'],
                                     cycle=True))
@@ -282,9 +285,11 @@ if __name__ == '__main__':
      .add_runner(  # Full epoch evaluation on validation set.
         tfplus.runner.create_from_main('average')
         .set_name('valid')
-        .set_outputs(['acc'])
-        .add_csv_listener('Accuracy', 'acc', 'valid')
-        .add_cmd_listener('Accuracy', 'acc')
+        .set_outputs(['acc', 'top5_acc'])
+        .add_csv_listener('Top 1 Accuracy', 'acc', 'valid')
+        .add_cmd_listener('Top 1 Accuracy', 'acc')
+        .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
+        .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
         .set_data_provider(get_data('valid', batch_size=opt['batch_size'],
                                     cycle=True))
         .set_phase_train(False)
