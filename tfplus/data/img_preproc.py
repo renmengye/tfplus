@@ -41,12 +41,14 @@ class ImagePreprocessor(object):
             self._rnd_resize[0], self._rnd_resize[1]))
         short = min(width, height)
         lon = max(width, height)
+        print self.siz
         if width < height:
             ratio = self.siz / width
             self.siz2 = (self.siz, int(height / ratio))
         else:
             ratio = self.siz / height
             self.siz2 = (int(width / ratio), self.siz)
+        print self.siz2
         self.offset = [0.0, 0.0]
         self.offset[0] = int(self._random.uniform(
             0.0, self.siz2[0] - self._crop))
