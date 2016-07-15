@@ -43,10 +43,10 @@ class ImagePreprocessor(object):
         lon = max(width, height)
         if width < height:
             ratio = self.siz / width
-            self.siz2 = (self.siz, int(height * ratio))
+            self.siz2 = (self.siz, int(height / ratio))
         else:
             ratio = self.siz / height
-            self.siz2 = (int(width * ratio), self.siz)
+            self.siz2 = (int(width / ratio), self.siz)
         self.offset = [0.0, 0.0]
         self.offset[0] = int(self._random.uniform(
             0.0, self.siz2[0] - self._crop))
