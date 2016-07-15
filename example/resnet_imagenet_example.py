@@ -127,18 +127,16 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         y_gt = inp['y_gt']
         y_out = output['y_out']
         ce = tfplus.nn.CE()({'y_gt': y_gt, 'y_out': y_out})
-        # ce = tf.Print(ce, [tf.reduce_mean(ce), tf.reduce_max(y_out),
-        #                    tf.reduce_min(y_out), 10.0])
         num_ex_f = tf.to_float(tf.shape(inp['x'])[0])
         ce = tf.reduce_sum(ce) / num_ex_f
-        # ce = tf.Print(ce, [tf.reduce_mean(ce), 11.0])
         self.add_loss(ce)
         total_loss = self.get_loss()
         self.register_var('loss', total_loss)
 
         ans = tf.argmax(y_gt, 1)
         correct = tf.equal(ans, tf.argmax(y_out, 1))
-        top5_acc = tf.reduce_sum(tf.nn.in_top_k(y_out, ans, 5)) / num_ex_f
+        top5_acc = tf.reduce_sum(tf.to_float(
+            tf.nn.in_top_k(y_out, ans, 5))) / num_ex_f
         self.register_var('top5_acc', top5_acc)
         acc = tf.reduce_sum(tf.to_float(correct)) / num_ex_f
         self.register_var('acc', acc)
