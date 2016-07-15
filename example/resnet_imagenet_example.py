@@ -244,7 +244,7 @@ if __name__ == '__main__':
         .set_outputs(['x_trans'])
         .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
         .set_data_provider(get_data('valid', batch_size=10, cycle=True,
-                                    max_queue_size=10. num_threads=5))
+                                    max_queue_size=10, num_threads=5))
         .set_phase_train(False)
         .set_offset(0)       # Every 500 steps (10 min)
         .set_interval(50))
