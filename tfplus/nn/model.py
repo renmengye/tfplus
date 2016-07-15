@@ -363,6 +363,7 @@ class Model(GraphBuilder, OptionBase):
         for v in all_vars:
             if v not in save_var_set:
                 aux_vars[v.name] = v
+                print v.name, v
                 pass
             pass
         return aux_vars
