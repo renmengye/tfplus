@@ -17,7 +17,6 @@ class ImagePreprocessor(object):
         self._crop = crop
         self._rnd_colour = rnd_colour
         self._image_in, self._image_out = self.build_colour_graph()
-        self.redraw()
         self._sess = tf.Session()
         pass
 
