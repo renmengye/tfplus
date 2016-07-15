@@ -237,17 +237,17 @@ if __name__ == '__main__':
                                     max_queue_size=10))
         .set_phase_train(True)
         .set_offset(0)       # Every 500 steps (10 min)
-        .set_interval(50))
+        .set_interval(1))
      .add_runner(
         tfplus.runner.create_from_main('basic')
         .set_name('plotter_valid')
         .set_outputs(['x_trans'])
         .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
-        .set_data_provider(get_data('valid', batch_size=10, cycle=True,
+        .set_data_provider(get_data('train', batch_size=10, cycle=True,
                                     max_queue_size=10))
         .set_phase_train(False)
         .set_offset(0)       # Every 500 steps (10 min)
-        .set_interval(50))
+        .set_interval(1))
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('train')
