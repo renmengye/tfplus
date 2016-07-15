@@ -44,11 +44,9 @@ class ImagePreprocessor(object):
         print (width, height)
         print self.siz
         if width < height:
-            ratio = self.siz / width
-            self.siz2 = (self.siz, int(height / ratio))
+            self.siz2 = (self.siz, int(height / width * self.siz))
         else:
-            ratio = self.siz / height
-            self.siz2 = (int(width / ratio), self.siz)
+            self.siz2 = (int(width / height * self.siz), self.siz)
         print self.siz2
         self.offset = [0.0, 0.0]
         self.offset[0] = int(self._random.uniform(
