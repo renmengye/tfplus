@@ -18,7 +18,7 @@ class ImagePreprocessor(object):
         # readonly
         self._resize = resize
         # readonly
-        self.crop = crop
+        self._crop = crop
         # readonly
         self._rnd_colour = rnd_colour
         self._image_in, self._image_out = self.build_colour_graph()
