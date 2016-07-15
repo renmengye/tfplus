@@ -90,18 +90,14 @@ class ImagePreprocessor(object):
             hflip = False
 
         image = cv2.resize(image, siz2, interpolation=cv2.INTER_CUBIC)
-        print '1', image.shape
         image = image[offset[1]: self._crop + offset[1],
                       offset[0]: self._crop + offset[0], :]
-        print 'A', image.shape
 
         if hflip:
             image = np.fliplr(image)
-        print 'C', image.shape
 
         if rnd and self._rnd_colour and image.shape[-1] == 3:
             image = self._sess.run(self._image_out, feed_dict={
                 self._image_in: image})
-        print 'E', image.shape
 
         return image
