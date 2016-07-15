@@ -11,6 +11,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
 
     def __init__(self, nlayers=None, name='resnet_imagenet'):
         super(ResNetImageNetModel, self).__init__(name=name)
+        self.log.fatal(self.name)
         self.nlayers = nlayers
         self._img_mean = np.array(
             [103.062623801, 115.902882574, 123.151630838], dtype='float32')
