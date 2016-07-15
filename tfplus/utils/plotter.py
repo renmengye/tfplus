@@ -64,10 +64,12 @@ class Plotter(Listener):
 
 class ThumbnailPlotter(Plotter):
 
-    def __init__(self, filename=None, name=None, cmap='Greys', max_num_col=5):
+    def __init__(self, filename=None, name=None, cmap='Greys', max_num_col=5,
+                 mode='float'):
         super(ThumbnailPlotter, self).__init__(filename=filename, name=name)
         self._cmap = cmap
         self._max_num_col = max_num_col
+        self._mode = mode
         pass
 
     @property
@@ -99,6 +101,13 @@ class ThumbnailPlotter(Plotter):
                 x = x[:, :, [2, 1, 0]]
             elif x.shape[-1] == 1:
                 x = x[:, :, 0]
+            if self._mode == 'uint8':
+                x = x.astype('uint8')
+            elif self._mode == 'float':
+                x[(x > 1.0)] = 1.0
+                x[(x < 0.0)] = 0.0
+            else:
+                raise Exception('Unknown mode: {}'.format(self._mode))
             ax.imshow(x, cmap=self.cmap)
             ax.text(0, -0.5, '[{:.2g}, {:.2g}]'.format(x.min(), x.max()),
                     color=(0, 0, 0), size=8)
@@ -107,7 +116,6 @@ class ThumbnailPlotter(Plotter):
         plt.savefig(self.filename, dpi=150)
         plt.close('all')
         pass
-    
 
     def calc_row_col(self, num_ex, num_items):
         num_rows_per_ex = int(np.ceil(num_items / self.max_num_col))

@@ -72,56 +72,72 @@ class ImageRandomTransform(GraphBuilder):
             inp_width = xshape[2] - self.shrink
             # Add padding
             if self.padding > 0:
-                x_pad = tf.pad(
+                x_rand = tf.pad(
                     x, [[0, 0], [padding, padding], [padding, padding],
                         [0, 0]])
+                x_ctr = tf.slice(x_pad, [0, padding, padding, 0],
+                                 tf.pack([-1, inp_height, inp_width, -1]))
             else:
-                x_pad = x
-            # Random crop
-            x_rand = tf.slice(x_pad, tf.pack([0, offset[0], offset[1], 0]),
-                              tf.pack([-1, inp_height + offset2[0],
-                                       inp_width + offset2[1], -1]))
-            if self.rnd_size:
-                x_rand = tf.image.resize_nearest_neighbor(
-                    x_rand, tf.pack([inp_height, inp_width]))
-            x_ctr = tf.slice(x_pad, [0, padding, padding, 0],
-                             tf.pack([-1, inp_height, inp_width, -1]))
-            mirror = tf.pack([1.0, rand_v[0], rand_h[0], 1.0]) < 0.5
-            x_rand = tf.reverse(x_rand, mirror)
-            do_tr = tf.cast(rand_t[0] < 0.5, 'int32')
-            x_rand = tf.transpose(x_rand, tf.pack(
-                [0, 1 + do_tr, 2 - do_tr, 3]))
+                x_ctr = x
+                x_rand = x
+
+            if self.padding != 0 or self.shrink != 0:
+                # Random crop
+                x_rand = tf.slice(x_pad, tf.pack([0, offset[0], offset[1], 0]),
+                                  tf.pack([-1, inp_height + offset2[0],
+                                           inp_width + offset2[1], -1]))
+                if self.rnd_size:
+                    x_rand = tf.image.resize_nearest_neighbor(
+                        x_rand, tf.pack([inp_height, inp_width]))
+
+            if self.rnd_hflip or self.rnd_vflip:
+                mirror = tf.pack([1.0, rand_v[0], rand_h[0], 1.0]) < 0.5
+                x_rand = tf.reverse(x_rand, mirror)
+
+            if self.rnd_transpose:
+                do_tr = tf.cast(rand_t[0] < 0.5, 'int32')
+                x_rand = tf.transpose(x_rand, tf.pack(
+                    [0, 1 + do_tr, 2 - do_tr, 3]))
+
         elif axis == 1:
             inp_height = xshape[2]
             inp_width = xshape[3]
+
             if self.padding > 0:
-                x_pad = tf.pad(
+                x_rand = tf.pad(
                     x, [[0, 0], [0, 0], [padding, padding],
                         [padding, padding]])
+                x_ctr = tf.slice(x_pad, [0, 0, padding, padding],
+                                 tf.pack([-1, -1, inp_height, inp_width]))
             else:
-                x_pad = x
-            x_rand = tf.slice(x_pad, tf.pack([0, 0, offset[0], offset[1]]),
-                              tf.pack([-1, -1, inp_height + offset2[0],
-                                       inp_width + offset2[1]]))
-            if self.rnd_size:
-                x_rand = tf.transpose(x_rand, [0, 2, 3, 1])
-                x_rand = tf.image.resize_nearest_neighbor(
-                    x_rand, tf.pack([inp_height, inp_width]))
-                x_rand = tf.transpose(x_rand, [0, 3, 1, 2])
+                x_ctr = x
+                x_rand = x
 
-            x_ctr = tf.slice(x_pad, [0, 0, padding, padding],
-                             tf.pack([-1, -1, inp_height, inp_width]))
-            mirror = tf.pack([1.0, 1.0, rand_v[0], rand_h[0]]) < 0.5
-            x_rand = tf.reverse(x_rand, mirror)
-            do_tr = tf.cast(rand_t[0] < 0.5, 'int32')
-            x_rand = tf.transpose(x_rand, tf.pack(
-                [0, 1, 2 + do_tr, 3 - do_tr]))
+            if self.padding != 0 or self.shrink != 0:
+                x_rand = tf.slice(x_pad, tf.pack([0, 0, offset[0], offset[1]]),
+                                  tf.pack([-1, -1, inp_height + offset2[0],
+                                           inp_width + offset2[1]]))
+                if self.rnd_size:
+                    x_rand = tf.transpose(x_rand, [0, 2, 3, 1])
+                    x_rand = tf.image.resize_nearest_neighbor(
+                        x_rand, tf.pack([inp_height, inp_width]))
+                    x_rand = tf.transpose(x_rand, [0, 3, 1, 2])
+
+            if self.rnd_hflip or self.rnd_vflip:
+                mirror = tf.pack([1.0, 1.0, rand_v[0], rand_h[0]]) < 0.5
+                x_rand = tf.reverse(x_rand, mirror)
+
+            if self.rnd_transpose:
+                do_tr = tf.cast(rand_t[0] < 0.5, 'int32')
+                x_rand = tf.transpose(x_rand, tf.pack(
+                    [0, 1, 2 + do_tr, 3 - do_tr]))
 
         if rnd_colour:
-            x_rand = random_hue(x_rand, 0.05)
-            x_rand = random_saturation(x_rand, 0.95, 1.05)
-            x_rand = tf.image.random_brightness(x_rand, 0.05)
-            x_rand = tf.image.random_contrast(x_rand, 0.95, 1.05)
+            x_rand = random_hue(x_rand, 32. / 255.)
+            x_rand = random_saturation(x_rand, 0.5, 1.5)
+            x_rand = tf.image.random_brightness(x_rand, 0.2)
+            x_rand = tf.image.random_contrast(x_rand, 0.5, 1.5)
+            x_rand = tf.clip_by_value(x_rand, 0.0, 1.0)
 
         x = (1.0 - phase_train_f) * x_ctr + phase_train_f * x_rand
         return x

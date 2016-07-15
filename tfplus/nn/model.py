@@ -307,12 +307,19 @@ class Model(GraphBuilder, OptionBase):
 
     def build_eval(self):
         """Build nodes for evaluation/inference."""
-        inp_var = self.build_input()
-        self.build(inp_var)
+        if self._has_built_all:
+            raise Exception('Only call build_all or build_eval once.')
+        self._has_built_all = True
+        with tf.device(self.get_device_fn()):
+            with tf.variable_scope(self.name):
+                inp_var = self.build_input()
+                self.build(inp_var)
         return self
 
     def build_all(self):
         """Build all nodes."""
+        if self._has_built_all:
+            raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
         with tf.device(self.get_device_fn()):
             with tf.variable_scope(self.name):
@@ -325,7 +332,8 @@ class Model(GraphBuilder, OptionBase):
 
     def init(self, sess):
         if not self.has_built_all:
-            raise Exception('Need to call build_all() before init()')
+            raise Exception(
+                'Need to call build_all or build_eval before init')
         self._has_init = True
         my_var_list = self.get_all_vars()
         sess.run(tf.initialize_variables(my_var_list))

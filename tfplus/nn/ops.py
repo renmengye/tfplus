@@ -110,10 +110,11 @@ class Linear(GraphBuilder):
             return h
 
     def get_save_var_dict(self):
-        return {
-            'w': self.w,
-            'b': self.b
-        }
+        results = {'w': self.w}
+        if self.bias:
+            results['b'] = self.b
+            pass
+        return results
 
 
 class DilatedConv2D(GraphBuilder):

@@ -32,18 +32,18 @@ tfplus.cmd_args.add('batch_size', 'int', 128)
 tfplus.cmd_args.add('prefetch', 'bool', False)
 
 # Model options
-tfplus.cmd_args.add('inp_height', 'int', 256)
-tfplus.cmd_args.add('inp_width', 'int', 256)
 tfplus.cmd_args.add('inp_depth', 'int', 3)
 tfplus.cmd_args.add('inp_shrink', 'int', 32)
 tfplus.cmd_args.add('layers', 'list<int>', [3, 4, 6, 3])
 tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2, 2])
 tfplus.cmd_args.add('channels', 'list<int>', [256, 256, 512, 1024, 2048])
+tfplus.cmd_args.add('compatible', 'bool', False)
 tfplus.cmd_args.add('shortcut', 'str', 'projection')
 tfplus.cmd_args.add('learn_rate', 'float', 0.01)
 tfplus.cmd_args.add('learn_rate_decay', 'float', 0.1)
 tfplus.cmd_args.add('steps_per_lr_decay', 'int', 160000)
 tfplus.cmd_args.add('momentum', 'float', 0.9)
+tfplus.cmd_args.add('optimizer', 'str', 'momentum')
 tfplus.cmd_args.add('wd', 'float', 1e-4)
 
 
@@ -51,8 +51,6 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
 
     def __init__(self, name='resnet_imagenet_example'):
         super(ResNetImageNetModelWrapper, self).__init__(name=name)
-        self.register_option('inp_height')
-        self.register_option('inp_width')
         self.register_option('inp_depth')
         self.register_option('inp_shrink')
         self.register_option('layers')
@@ -64,18 +62,19 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         self.register_option('learn_rate_decay')
         self.register_option('steps_per_lr_decay')
         self.register_option('momentum')
+        self.register_option('optimizer')
         self.register_option('wd')
         pass
 
     def init_default_options(self):
         self.set_default_option('bottleneck', True)
+        self.set_default_option('optimizer', 'momentum')
+        pass
 
     def build_input(self):
-        inp_height = self.get_option('inp_height')
-        inp_width = self.get_option('inp_width')
         inp_depth = self.get_option('inp_depth')
         x = self.add_input_var(
-            'x', [None, inp_height, inp_width, inp_depth], 'float')
+            'x', [None, None, None, inp_depth], 'float')
         x_id = tf.identity(x)
         self.register_var('x_id', x_id)
         y_gt = self.add_input_var('y_gt', [None, NUM_CLS], 'float')
@@ -87,35 +86,31 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         }
 
     def init_var(self):
-        inp_height = self.get_option('inp_height')
-        inp_width = self.get_option('inp_width')
         inp_depth = self.get_option('inp_depth')
         inp_shrink = self.get_option('inp_shrink')
         layers = self.get_option('layers')
         strides = self.get_option('strides')
         channels = self.get_option('channels')
         bottleneck = self.get_option('bottleneck')
+        compatible = self.get_option('compatible')
         shortcut = self.get_option('shortcut')
         wd = self.get_option('wd')
         phase_train = self.get_input_var('phase_train')
 
-        self.rnd_trans = tfplus.nn.ImageRandomTransform(
-            padding=0,
-            shrink=inp_shrink,  # 256 -> 224 (random crop)
-            rnd_hflip=True,
-            rnd_vflip=False,
-            rnd_transpose=False,
-            rnd_size=False)
+        # self.rnd_trans = tfplus.nn.ImageRandomTransform(
+        #     rnd_hflip=True,
+        #     rnd_vflip=False,
+        #     rnd_transpose=False,
+        #     rnd_size=False)
         self.res_net = ResNetImageNetModel()
         self.res_net.set_all_options({
-            'inp_height': inp_height - inp_shrink,
-            'inp_width': inp_width - inp_shrink,
             'inp_depth': inp_depth,
             'layers': layers,
             'strides': strides,
             'channels': channels,
             'bottleneck': bottleneck,
             'shortcut': shortcut,
+            'compatible': compatible,
             'weight_decay': wd
         })
         pass
@@ -125,7 +120,9 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         x = inp['x']
         phase_train = inp['phase_train']
         # x = tf.Print(x, [tf.reduce_mean(x)])
-        x = self.rnd_trans({'input': x, 'phase_train': phase_train})
+        # x = self.rnd_trans(
+        #     {'input': x, 'phase_train': phase_train, 'rnd_colour': True})
+        x = tf.identity(x)
         # x = tf.Print(x, [tf.reduce_mean(x)])
         self.register_var('x_trans', x)
         y_out = self.res_net({'x': x, 'phase_train': phase_train})
@@ -156,14 +153,20 @@ class ResNetImageNetModelWrapper(tfplus.nn.Model):
         learn_rate = self.get_option('learn_rate')
         lr_decay = self.get_option('learn_rate_decay')
         steps_decay = self.get_option('steps_per_lr_decay')
-        mom = self.get_option('momentum')
-        num_ex = tf.shape(self.get_var('x'))[0]
         learn_rate = tf.train.exponential_decay(
             learn_rate, self.global_step, steps_decay, lr_decay,
             staircase=True)
         self.register_var('learn_rate', learn_rate)
-        # optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
-        optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=mom)
+        num_ex = tf.shape(self.get_var('x'))[0]
+        optimizer_typ = self.get_option('optimizer')
+        if optimizer_typ == 'momentum':
+            mom = self.get_option('momentum')
+            optimizer = tf.train.MomentumOptimizer(learn_rate, momentum=mom)
+        elif optimizer_typ == 'adam':
+            eps = 1e-7
+            optimizer = tf.train.AdamOptimizer(learn_rate, epsilon=eps)
+        else:
+            raise Exception('Unknown optimizer type: {}'.format(optimizer_typ))
         train_step = optimizer.minimize(loss, global_step=self.global_step)
         return train_step
 
@@ -201,15 +204,22 @@ if __name__ == '__main__':
              .set_folder(results_folder)
              .restore_options_from(opt['restore_model'])
              .build_all()
-             .init(sess)
-             .restore_weights_aux_from(sess, opt['restore_model']))
+             )
+
+    if opt['restore_model'] is not None:
+        model.restore_weights_aux_from(sess, opt['restore_model'])
+    else:
+        model.init(sess)
 
     # Initialize data.
-    def get_data(split, batch_size=128, cycle=True):
-        dp = tfplus.data.create_from_main(DATASET, split=split).set_iter(
+    def get_data(split, batch_size=128, cycle=True, max_queue_size=30,
+                 num_threads=10):
+        dp = tfplus.data.create_from_main(
+            DATASET, split=split, mode=split).set_iter(
             batch_size=batch_size, cycle=cycle)
         if opt['prefetch']:
-            return tfplus.data.ConcurrentDataProvider(dp, max_queue_size=30)
+            return tfplus.data.ConcurrentDataProvider(
+                dp, max_queue_size=max_queue_size, num_threads=num_threads)
         else:
             return dp
 
@@ -224,7 +234,28 @@ if __name__ == '__main__':
      .add_csv_output('Accuracy', ['train', 'valid'])
      .add_csv_output('Step Time', ['train'])
      .add_csv_output('Learning Rate', ['train'])
-     .add_plot_output('Input', 'thumbnail', max_num_col=5)
+     .add_plot_output('Input (Train)', 'thumbnail', max_num_col=5)
+     .add_plot_output('Input (Valid)', 'thumbnail', max_num_col=5)
+     .add_runner(
+        tfplus.runner.create_from_main('basic')
+        .set_name('plotter_train')
+        .set_outputs(['x_trans'])
+        .add_plot_listener('Input (Train)', {'x_trans': 'images'})
+        .set_data_provider(get_data('train', batch_size=10, cycle=True,
+                                    max_queue_size=10))
+        .set_phase_train(True)
+        .set_offset(0)       # Every 500 steps (10 min)
+        .set_interval(50))
+     .add_runner(
+        tfplus.runner.create_from_main('basic')
+        .set_name('plotter_valid')
+        .set_outputs(['x_trans'])
+        .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
+        .set_data_provider(get_data('valid', batch_size=10, cycle=True,
+                                    max_queue_size=10))
+        .set_phase_train(False)
+        .set_offset(0)       # Every 500 steps (10 min)
+        .set_interval(50))
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('train')
@@ -242,7 +273,7 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('saver')
         .set_name('saver')
-        .set_interval(100))    # Every 1000 steps
+        .set_interval(100))    # Every 1000 steps (20 min)
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('trainval')
@@ -255,7 +286,7 @@ if __name__ == '__main__':
         .set_phase_train(False)
         .set_num_batch(10)
         .set_offset(100)
-        .set_interval(20))     # Every 200 steps
+        .set_interval(20))     # Every 200 steps (4 min)
      .add_runner(  # Full epoch evaluation on validation set.
         tfplus.runner.create_from_main('average')
         .set_name('valid')
@@ -267,14 +298,6 @@ if __name__ == '__main__':
         .set_phase_train(False)
         .set_num_batch(50000 / opt['batch_size'])
         .set_offset(100)
-        .set_interval(500))    # Every 5000 steps.
-     .add_runner(
-        tfplus.runner.create_from_main('basic')
-        .set_name('plotter')
-        .set_outputs(['x_trans'])
-        .add_plot_listener('Input', {'x_trans': 'images'})
-        .set_data_provider(get_data('valid', batch_size=10, cycle=True))
-        .set_phase_train(False)
-        .set_offset(100)       # Every 1000 steps.
-        .set_interval(10))).run()
+        .set_interval(1000))    # Every 10000 steps (200 min)
+     ).run()
     pass

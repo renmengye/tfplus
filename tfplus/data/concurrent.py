@@ -20,14 +20,14 @@ class Producer(threading.Thread):
 
 class ConcurrentDataProvider(DataProvider):
 
-    def __init__(self, data_provider, max_queue_size=10, num_fetchers=5):
+    def __init__(self, data_provider, max_queue_size=10, num_threads=5):
         """
         Data provider wrapper that supports concurrent data fetching.
         """
         super(ConcurrentDataProvider, self).__init__()
         self.q = Queue.Queue(maxsize=max_queue_size)
         self.fetchers = []
-        for ii in xrange(num_fetchers):
+        for ii in xrange(num_threads):
             f = Producer(self.q, data_provider)
             f.start()
             self.fetchers.append(f)

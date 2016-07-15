@@ -28,7 +28,8 @@ class ResNet(GraphBuilder):
 
     def __init__(self, layers, channels, strides, bottleneck=False,
                  dilation=False, wd=None, scope='res_net',
-                 shortcut='projection', initialization='msra'):
+                 shortcut='projection', initialization='msra',
+                 compatible=False):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -36,11 +37,14 @@ class ResNet(GraphBuilder):
         self.scope = scope
         self.num_stage = len(layers)
         self.w = [None] * self.num_stage
-        self.proj_w = [None] * self.num_stage
+        self.bn = [None] * self.num_stage
+        self.shortcut_w = [None] * self.num_stage
+        self.shortcut_bn = [None] * self.num_stage
         # self.b = [None] * self.num_stage
         self.bottleneck = bottleneck
         self.dilation = dilation
         self.shortcut = shortcut
+        self.compatible = compatible
         self.wd = wd
         if bottleneck:
             self.unit_depth = 3
@@ -75,12 +79,14 @@ class ResNet(GraphBuilder):
             ch_out_ = ch_out
         return f_, ch_in_, ch_out_
 
-    def apply_shortcut(self, prev_inp, ch_in, ch_out, proj_w=None, stride=None):
+    def apply_shortcut(self, prev_inp, ch_in, ch_out, phase_train=None, w=None, stride=None):
         if self.shortcut == 'projection':
             if self.dilation:
-                prev_inp = DilatedConv2D(proj_w, rate=stride)(prev_inp)
+                prev_inp = DilatedConv2D(w, rate=stride)(prev_inp)
             else:
-                prev_inp = Conv2D(proj_w, stride=stride)(prev_inp)
+                prev_inp = Conv2D(w, stride=stride)(prev_inp)
+            bn = BatchNorm(ch_out)
+            prev_inp = bn({'input': prev_inp, 'phase_train': phase_train})
         elif self.shortcut == 'identity':
             pad_ch = ch_out - ch_in
             if pad_ch < 0:
@@ -88,9 +94,10 @@ class ResNet(GraphBuilder):
             prev_inp = tf.pad(prev_inp, [[0, 0], [0, 0], [0, 0], [0, pad_ch]])
             if stride > 1:
                 prev_inp = AvgPool(stride)(prev_inp)
+            bn = None
         self.log.info('After proj shape: {}'.format(
             prev_inp.get_shape()))
-        return prev_inp
+        return prev_inp, bn
 
     def init_var(self):
         with tf.variable_scope(self.scope):
@@ -106,14 +113,16 @@ class ResNet(GraphBuilder):
                             pass
                         self.w[ii][jj] = [None] * self.unit_depth
                         # self.b[ii][jj] = [None] * self.unit_depth
-                        if ch_in != ch_out:
+
+                        if jj == 0 and (ch_in != ch_out or self.compatible):
                             if self.shortcut == 'projection':
-                                self.proj_w[ii] = self.declare_var(
-                                    [1, 1, ch_in, ch_out], wd=self.wd,
-                                    name='proj_w',
-                                    stddev=self.compute_std(
-                                        [1, 1, ch_in, ch_out])
-                                )
+                                with tf.variable_scope('shortcut'):
+                                    self.shortcut_w[ii] = self.declare_var(
+                                        [1, 1, ch_in, ch_out], wd=self.wd,
+                                        name='w',
+                                        stddev=self.compute_std(
+                                            [1, 1, ch_in, ch_out])
+                                    )
                                 pass
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
@@ -125,15 +134,11 @@ class ResNet(GraphBuilder):
                                         [f_, f_, ch_in_, ch_out_], wd=self.wd,
                                         name='w',
                                         stddev=self.compute_std(
-                                            [f_, f_, ch_in, ch_out])
+                                            [f_, f_, ch_in_, ch_out_])
                                     )
                                     self.log.info('Init SD: {}'.format(
                                         self.compute_std(
-                                            [f_, f_, ch_in, ch_out])))
-                                    # self.b[ii][jj][kk] = self.declare_var(
-                                    #     [ch_out_], name='b',
-                                    #     stddev=0
-                                    # )
+                                            [f_, f_, ch_in_, ch_out_])))
                                 self.log.info('Filter: {}'.format(
                                     [f_, f_, ch_in_, ch_out_]))
                                 self.log.info('Weights: {}'.format(
@@ -151,7 +156,6 @@ class ResNet(GraphBuilder):
         x = inp['input']
         phase_train = inp['phase_train']
         prev_inp = x
-        self.bn = [None] * self.num_stage
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
                 print 'Stage count', ii, 'of', self.num_stage
@@ -167,54 +171,123 @@ class ResNet(GraphBuilder):
                             ch_in = ch_out
                         else:
                             # First unit of the layer.
-                            if ch_in != ch_out:
-                                prev_inp = self.apply_shortcut(
-                                    prev_inp, ch_in, ch_out,
-                                    proj_w=self.proj_w[ii],
-                                    stride=s)
-                            elif s != 1:
-                                if not self.dilation:
-                                    prev_inp = AvgPool(s)(prev_inp)
-                                    self.log.info('After pool shape: {}'.format(
-                                        prev_inp.get_shape()))
+                            print 'In', ch_in, 'Out', ch_out
+                            if self.compatible:
+                                # In compatible mode, always project.
+                                with tf.variable_scope('shortcut'):
+                                    prev_inp, proj_bn = self.apply_shortcut(
+                                        prev_inp, ch_in, ch_out,
+                                        phase_train=phase_train,
+                                        w=self.shortcut_w[ii],
+                                        stride=s)
+                                    self.shortcut_bn[ii] = proj_bn
+                            else:
+                                if ch_in != ch_out:
+                                    with tf.variable_scope('shortcut'):
+                                        prev_inp, proj_bn = self.apply_shortcut(
+                                            prev_inp, ch_in, ch_out,
+                                            phase_train=phase_train,
+                                            w=self.shortcut_w[ii],
+                                            stride=s)
+                                        self.shortcut_bn[ii] = proj_bn
+                                elif s != 1:
+                                    if not self.dilation:
+                                        prev_inp = AvgPool(s)(prev_inp)
+                                        self.log.info('After pool shape: {}'.format(
+                                            prev_inp.get_shape()))
 
                         with tf.variable_scope('layer_{}'.format(jj)):
                             self.bn[ii][jj] = [None] * self.unit_depth
-                            for kk in xrange(self.unit_depth):
-                                with tf.variable_scope('unit_{}'.format(kk)):
-                                    f_, ch_in_, ch_out_ = self.compute_in_out(
-                                        kk, ch_in, ch_out)
-                                    self.bn[ii][jj][kk] = BatchNorm(ch_in_)
-                                    h = self.bn[ii][jj][kk](
-                                        {'input': h,
-                                         'phase_train': phase_train})
-                                    h = tf.nn.relu(h)
-                                    if self.dilation:
-                                        # h = DilatedConv2D(
-                                        #     self.w[ii][jj][kk], rate=s)(
-                                        #     h) + self.b[ii][jj][kk]
-                                        h = DilatedConv2D(
-                                            self.w[ii][jj][kk], rate=s)(
-                                            h)
-                                    else:
-                                        # h = Conv2D(self.w[ii][jj][kk],
-                                        #            stride=s)(
-                                        #     h) + self.b[ii][jj][kk]
-                                        h = Conv2D(self.w[ii][jj][kk],
-                                                   stride=s)(
-                                            h)
-                                    self.log.info('Unit {} shape: {}'.format(
-                                        kk, h.get_shape()))
-                                    pass
-                                if not self.dilation and kk == 0:
-                                    # Change the stride to 1 after 2.
-                                    # Only in standard mode.
-                                    # In dilation mode, everything is accumulated.
-                                    # Nothing is down-sampled.
-                                    # i.e. 1,1,1,2,2,2,4,4,4,8,8,8
-                                    s = 1
+
+                            if self.compatible:
+                                # A compatible graph for building weights
+                                # older version of ResNet
+                                if self.bottleneck:
+                                    with tf.variable_scope('unit_0'):
+                                        f_, ch_in_, ch_out_ = \
+                                            self.compute_in_out(
+                                                0, ch_in, ch_out)
+                                        h = Conv2D(self.w[ii][jj][0],
+                                                   stride=s)(h)
+                                        self.bn[ii][jj][0] = BatchNorm(ch_out_)
+                                        h = self.bn[ii][jj][0](
+                                            {'input': h,
+                                             'phase_train': phase_train})
+                                        h = tf.nn.relu(h)
+                                    with tf.variable_scope('unit_1'):
+                                        f_, ch_in_, ch_out_ = \
+                                            self.compute_in_out(
+                                                1, ch_in, ch_out)
+                                        h = Conv2D(self.w[ii][jj][1])(h)
+                                        self.bn[ii][jj][1] = BatchNorm(ch_out_)
+                                        h = self.bn[ii][jj][1](
+                                            {'input': h,
+                                             'phase_train': phase_train})
+                                        h = tf.nn.relu(h)
+                                    with tf.variable_scope('unit_2'):
+                                        f_, ch_in_, ch_out_ = \
+                                            self.compute_in_out(
+                                                2, ch_in, ch_out)
+                                        h = Conv2D(self.w[ii][jj][2])(h)
+                                        self.bn[ii][jj][2] = BatchNorm(ch_out_)
+                                        h = self.bn[ii][jj][2](
+                                            {'input': h,
+                                             'phase_train': phase_train})
+                                else:
+                                    with tf.variable_scope('unit_0'):
+                                        f_, ch_in_, ch_out_ = \
+                                            self.compute_in_out(
+                                                0, ch_in, ch_out)
+                                        h = Conv2D(self.w[ii][jj][0],
+                                                   stride=s)(h)
+                                        self.bn[ii][jj][0] = BatchNorm(ch_out_)
+                                        h = self.bn[ii][jj][0](
+                                            {'input': h,
+                                             'phase_train': phase_train})
+                                        h = tf.nn.relu(h)
+                                    with tf.variable_scope('unit_1'):
+                                        f_, ch_in_, ch_out_ = \
+                                            self.compute_in_out(
+                                                1, ch_in, ch_out)
+                                        h = Conv2D(self.w[ii][jj][1])(h)
+                                        self.bn[ii][jj][1] = BatchNorm(ch_out_)
+                                        h = self.bn[ii][jj][1](
+                                            {'input': h,
+                                             'phase_train': phase_train})
+                                s = 1
+                            else:
+                                # New version of ResNet
+                                # Full pre-activation
+                                for kk in xrange(self.unit_depth):
+                                    with tf.variable_scope('unit_{}'.format(kk)):
+                                        f_, ch_in_, ch_out_ = self.compute_in_out(
+                                            kk, ch_in, ch_out)
+                                        self.bn[ii][jj][kk] = BatchNorm(ch_in_)
+                                        h = self.bn[ii][jj][kk](
+                                            {'input': h,
+                                             'phase_train': phase_train})
+                                        h = tf.nn.relu(h)
+                                        if self.dilation:
+                                            h = DilatedConv2D(
+                                                self.w[ii][jj][kk], rate=s)(h)
+                                        else:
+                                            h = Conv2D(self.w[ii][jj][kk],
+                                                       stride=s)(h)
+                                        self.log.info('Unit {} shape: {}'.format(
+                                            kk, h.get_shape()))
+                                        pass
+                                    if not self.dilation and kk == 0:
+                                        s = 1
                             pass
-                        prev_inp = prev_inp + h
+
+                        if self.compatible:
+                            # Old version
+                            # Relu after add
+                            prev_inp = tf.nn.relu(prev_inp + h)
+                        else:
+                            # New version
+                            # Pure linear
+                            prev_inp = prev_inp + h
                         self.log.info('After add shape: {}'.format(
                             prev_inp.get_shape()))
                         pass
@@ -227,8 +300,14 @@ class ResNet(GraphBuilder):
         results = {}
         for ii in xrange(self.num_stage):
             stage_prefix = 'stage_{}/'.format(ii)
-            if self.proj_w[ii] is not None:
-                results[stage_prefix + 'proj_w'] = self.proj_w[ii]
+            if self.shortcut_w[ii] is not None:
+                short_prefix = stage_prefix + 'shortcut/'
+                results[stage_prefix + 'shortcut/w'] = self.shortcut_w[ii]
+            if self.shortcut_bn[ii] is not None:
+                self.add_prefix_to(
+                    short_prefix + 'bn',
+                    self.shortcut_bn[ii].get_save_var_dict(),
+                    results)
             for jj in xrange(self.layers[ii]):
                 for kk in xrange(self.unit_depth):
                     prefix = 'stage_{}/layer_{}/unit_{}/'.format(ii, jj, kk)
