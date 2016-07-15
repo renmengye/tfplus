@@ -19,7 +19,7 @@ class ImagePreprocessor(object):
         self._sess = tf.Session()
         pass
 
-    def build_colour_graph():
+    def build_colour_graph(self):
         """Build random colour graph."""
         device = '/cpu:0'
         with tf.device(device):
@@ -35,7 +35,7 @@ class ImagePreprocessor(object):
             image_out = tf.clip_by_value(image_out, 0.0, 1.0)
         return image_in, image_out
 
-    def redraw():
+    def redraw(self):
         self.siz = int(self._random.uniform(
             self._rnd_resize[0], self._rnd_resize[1]))
         self.offset = []
