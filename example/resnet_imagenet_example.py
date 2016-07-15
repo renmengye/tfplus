@@ -136,7 +136,10 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         total_loss = self.get_loss()
         self.register_var('loss', total_loss)
 
-        correct = tf.equal(tf.argmax(y_gt, 1), tf.argmax(y_out, 1))
+        ans = tf.argmax(y_gt, 1)
+        correct = tf.equal(ans, tf.argmax(y_out, 1))
+        top5_acc = tf.nn.in_top_k(y_out, ans, 5)
+        self.register_var('top5_acc', top5_acc)
         acc = tf.reduce_sum(tf.to_float(correct)) / num_ex_f
         self.register_var('acc', acc)
         return total_loss
@@ -166,10 +169,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         results = {}
         if self.has_var('step'):
             results['step'] = self.get_var('step')
-        # self.add_prefix_to(None, self.res_net.get_save_var_dict(), results)
-        # self.log.info('Save variable list:')
-        # [self.log.info((v[0], v[1].name)) for v in results.items()]
-        # return results
+        return results
     pass
 
 
@@ -265,7 +265,7 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('saver')
         .set_name('saver')
-        .set_interval(100))    # Every 1000 steps (20 min)
+        .set_interval(1))    # Every 1000 steps (20 min)
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('trainval')

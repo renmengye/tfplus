@@ -364,6 +364,9 @@ class Model(GraphBuilder, OptionBase):
                 pass
             pass
         return aux_vars
+
+    def get_save_var_list_recursive(self):
+        return self.get_save_var_dict().values()
     pass
 
 
@@ -433,3 +436,22 @@ class ContainerModel(Model):
             pass
         return super(ContainerModel, self).restore_weights_aux_from(
             sess, folder)
+
+    def get_save_var_list_recursive(self):
+        save_vars = []
+        for m in self.sub_models:
+            save_vars.extend(m.get_save_var_list_recursive())
+        save_vars.extend(self.get_save_var_dict().values())
+        return save_vars
+
+    def get_aux_var_dict(self):
+        all_vars = self.get_all_vars()
+        all_save_vars = self.get_save_var_list_recursive()
+        save_var_set = set(all_save_vars)
+        aux_vars = {}
+        for v in all_vars:
+            if v not in save_var_set:
+                aux_vars[v.name] = v
+                pass
+            pass
+        return aux_vars
