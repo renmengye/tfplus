@@ -12,7 +12,7 @@ import tensorflow as tf
 class ImageNetDataProvider(tfplus.data.DataProvider):
 
     def __init__(self, split='train', folder='/ais/gobi3/datasets/imagenet',
-                 mode='train', rnd_resize=[256, 480], crop=224):
+                 mode='train'):
         """
         Mode: train or valid or test
         Train: Random scale, random crop
@@ -25,12 +25,15 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
         self._folder = folder
         self._img_ids = None
         self._labels = None
-        self._random = np.random.RandomState(2)
-        self._crop = crop
+        # self._random = np.random.RandomState(2)
+        # self._crop = crop
         self._mode = mode
-        self._rnd_resize = rnd_resize
-        self._image_in, self._image_out = self.build_trans_graph()
-        self._sess = tf.Session()
+        # self._rnd_resize = rnd_resize
+        # self._image_in, self._image_out = self.build_trans_graph()
+        # self._sess = tf.Session()
+        self._rnd_proc = ImagePreprocessor(
+            rnd_hflip=True, rnd_colour=True, rnd_resize=[256, 480], resize=256,
+            crop=224)
         pass
 
     @property
@@ -82,20 +85,20 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
     def get_size(self):
         return len(self.img_ids)
 
-    def build_trans_graph(self):
-        device = '/cpu:0'
-        with tf.device(device):
-            image_in = tf.placeholder('float', [None, None, 3])
-            image_out = image_in
-            image_out = tf.image.random_flip_left_right(image_out)
-            image_out = tf.image.random_brightness(
-                image_out, max_delta=32. / 255.)
-            image_out = tf.image.random_saturation(
-                image_out, lower=0.5, upper=1.5)
-            image_out = tf.image.random_hue(image_out, max_delta=0.2)
-            image_out = tf.image.random_contrast(
-                image_out, lower=0.5, upper=1.5)
-        return image_in, image_out
+    # def build_trans_graph(self):
+    #     device = '/cpu:0'
+    #     with tf.device(device):
+    #         image_in = tf.placeholder('float', [None, None, 3])
+    #         image_out = image_in
+    #         image_out = tf.image.random_flip_left_right(image_out)
+    #         image_out = tf.image.random_brightness(
+    #             image_out, max_delta=32. / 255.)
+    #         image_out = tf.image.random_saturation(
+    #             image_out, lower=0.5, upper=1.5)
+    #         image_out = tf.image.random_hue(image_out, max_delta=0.2)
+    #         image_out = tf.image.random_contrast(
+    #             image_out, lower=0.5, upper=1.5)
+    #     return image_in, image_out
 
     def get_batch_idx(self, idx, **kwargs):
         start_time = time.time()
@@ -109,28 +112,30 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             img_fname = os.path.join(self.folder, folder, self.img_ids[ii])
             # print img_fname
             x_ = cv2.imread(img_fname)
-            if self._mode == 'train':
-                siz = int(self._random.uniform(
-                    self._rnd_resize[0], self._rnd_resize[1]))
-                offset = [0, 0]
-                offset[0] = int(self._random.uniform(siz - self._crop))
-                offset[1] = int(self._random.uniform(siz - self._crop))
-                print offset[0], offset[1]
-            elif self._mode == 'valid':
-                siz = 256
-                offset = (self._rnd_resize[0] - self._crop) / 2
-                offset = [offset, offset]
-                pass
-            elif self._mode == 'test':
-                raise Exception('Not implemented')
-                pass
-            x_ = cv2.resize(x_, (siz, siz), interpolation=cv2.INTER_CUBIC)
-            x_ = x_[offset[0]: self._crop + offset[0],
-                    offset[1]: self._crop + offset[1], :]
-            if self._mode == 'train':
-                # Flip + Colour Augmentation
-                x_ = self._sess.run(self._image_out, feed_dict={
-                                    self._image_in: x_})
+            rnd = self._mode == 'train'
+            x_ self._rnd_proc.process(x_, rnd=rnd)
+            # if self._mode == 'train':
+            #     siz = int(self._random.uniform(
+            #         self._rnd_resize[0], self._rnd_resize[1]))
+            #     offset = [0, 0]
+            #     offset[0] = int(self._random.uniform(siz - self._crop))
+            #     offset[1] = int(self._random.uniform(siz - self._crop))
+            #     print offset[0], offset[1]
+            # elif self._mode == 'valid':
+            #     siz = 256
+            #     offset = (self._rnd_resize[0] - self._crop) / 2
+            #     offset = [offset, offset]
+            #     pass
+            # elif self._mode == 'test':
+            #     raise Exception('Not implemented')
+            #     pass
+            # x_ = cv2.resize(x_, (siz, siz), interpolation=cv2.INTER_CUBIC)
+            # x_ = x_[offset[0]: self._crop + offset[0],
+            #         offset[1]: self._crop + offset[1], :]
+            # if self._mode == 'train':
+            #     # Flip + Colour Augmentation
+            #     x_ = self._sess.run(self._image_out, feed_dict={
+            #                         self._image_in: x_})
             x[kk] = x_
             y_gt[kk, self.labels[ii]] = 1.0
         results = {

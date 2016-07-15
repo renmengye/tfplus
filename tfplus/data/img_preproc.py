@@ -5,6 +5,9 @@ import tensorflow as tf
 class ImagePreprocessor(object):
 
     def __init__(self, resize, rnd_hflip, rnd_resize, crop, rnd_colour):
+        """
+        """
+        self._random = np.random.RandomState(2)
         self._rnd_resize = rnd_resize
         self._rnd_hflip = rnd_hflip
         self._resize = resize
@@ -15,6 +18,7 @@ class ImagePreprocessor(object):
         pass
 
     def build_colour_graph():
+        """Build random colour graph."""
         device = '/cpu:0'
         with tf.device(device):
             image_in = tf.placeholder('float', [None, None, 3])
@@ -45,7 +49,6 @@ class ImagePreprocessor(object):
                 hflip = bool(self._random.uniform(0, 1))
             else:
                 hflip = False
-
         else:
             siz = self._resize
             offset = (self._rnd_resize[0] - self._crop) / 2
@@ -58,8 +61,8 @@ class ImagePreprocessor(object):
         if hflip:
             image = np.fliplr(image)
 
-        if rnd and self._rnd_colour:
+        if rnd and self._rnd_colour and image.shape[-1] == 3:
             image = self._sess.run(self._image_out, feed_dict={
                 self._image_in: image})
 
-        pass
+        return image
