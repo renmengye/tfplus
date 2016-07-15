@@ -96,7 +96,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             x_ = cv2.imread(img_fname)
             rnd = self._mode == 'train'
             x_ = self._rnd_proc.process(x_, rnd=rnd)
-            if x = None:
+            if x is None:
                 x = np.zeros([len(idx), x_.shape[0], x_.shape[1], x_.shape[2]],
                              dtype='float32')
             x[kk] = x_
