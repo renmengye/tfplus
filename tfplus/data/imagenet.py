@@ -102,7 +102,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             x[kk] = x_
             y_gt[kk, self.labels[ii]] = 1.0
         results = {
-            'x': x / 255,
+            'x': x,
             'y_gt': y_gt
         }
         # self.log.info('Fetch data time: {:.4f} ms'.format(
