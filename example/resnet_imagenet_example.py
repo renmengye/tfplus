@@ -56,6 +56,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         self.register_option('layers')
         self.register_option('strides')
         self.register_option('channels')
+        self.register_option('compatible')
         self.register_option('bottleneck')
         self.register_option('shortcut')
         self.register_option('learn_rate')
