@@ -39,8 +39,8 @@ class ImagePreprocessor(object):
         self.siz = int(self._random.uniform(
             self._rnd_resize[0], self._rnd_resize[1]))
         self.offset = []
-        self.offset[0] = int(self._random.uniform(0.0, siz - self._crop))
-        self.offset[1] = int(self._random.uniform(0.0, siz - self._crop))
+        self.offset[0] = int(self._random.uniform(0.0, self.siz - self._crop))
+        self.offset[1] = int(self._random.uniform(0.0, self.siz - self._crop))
         self.hflip = bool(self._random.uniform(0, 1))
         pass
 
