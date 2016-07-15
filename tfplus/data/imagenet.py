@@ -8,6 +8,8 @@ import cv2
 import time
 import tensorflow as tf
 
+from img_preproc import ImagePreprocessor
+
 
 class ImageNetDataProvider(tfplus.data.DataProvider):
 
@@ -110,32 +112,10 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             else:
                 folder = self.split
             img_fname = os.path.join(self.folder, folder, self.img_ids[ii])
-            # print img_fname
+            # self.log.info('Image filename: {}'.format(img_fname))
             x_ = cv2.imread(img_fname)
             rnd = self._mode == 'train'
             x_ = self._rnd_proc.process(x_, rnd=rnd)
-            # if self._mode == 'train':
-            #     siz = int(self._random.uniform(
-            #         self._rnd_resize[0], self._rnd_resize[1]))
-            #     offset = [0, 0]
-            #     offset[0] = int(self._random.uniform(siz - self._crop))
-            #     offset[1] = int(self._random.uniform(siz - self._crop))
-            #     print offset[0], offset[1]
-            # elif self._mode == 'valid':
-            #     siz = 256
-            #     offset = (self._rnd_resize[0] - self._crop) / 2
-            #     offset = [offset, offset]
-            #     pass
-            # elif self._mode == 'test':
-            #     raise Exception('Not implemented')
-            #     pass
-            # x_ = cv2.resize(x_, (siz, siz), interpolation=cv2.INTER_CUBIC)
-            # x_ = x_[offset[0]: self._crop + offset[0],
-            #         offset[1]: self._crop + offset[1], :]
-            # if self._mode == 'train':
-            #     # Flip + Colour Augmentation
-            #     x_ = self._sess.run(self._image_out, feed_dict={
-            #                         self._image_in: x_})
             x[kk] = x_
             y_gt[kk, self.labels[ii]] = 1.0
         results = {
