@@ -85,7 +85,7 @@ class ImagePreprocessor(object):
             siz2 = (self._resize, self._resize)
             offset = [0, 0]
             offset[0] = int((siz2[0] - self._crop) / 2)
-            offset[0] = int((siz2[1] - self._crop) / 2)
+            offset[1] = int((siz2[1] - self._crop) / 2)
             hflip = False
 
         image = cv2.resize(image, siz2, interpolation=cv2.INTER_CUBIC)
