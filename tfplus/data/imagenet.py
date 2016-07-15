@@ -1,5 +1,3 @@
-# import sys
-# sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
 import tfplus
 import os
 import numpy as np
@@ -7,19 +5,23 @@ import synset
 import cv2
 import time
 import tensorflow as tf
+import tfplus
+import threading
 
 from img_preproc import ImagePreprocessor
+
+tfplus.cmd_args.add('imagenet:dataset_folder', 'str',
+                    '/ais/gobi3/datasets/imagenet')
 
 
 class ImageNetDataProvider(tfplus.data.DataProvider):
 
-    def __init__(self, split='train', folder='/ais/gobi3/datasets/imagenet',
-                 mode='train'):
+    def __init__(self, split='train', folder=None, mode='train'):
         """
         Mode: train or valid or test
         Train: Random scale, random crop
         Valid: Single center crop
-        Test: use 10-crop testing... Something that we haven't implemented yet...
+        Test: use 10-crop testing... Something that we haven't implemented yet.
         """
         super(ImageNetDataProvider, self).__init__()
         self.log = tfplus.utils.logger.get()
@@ -31,10 +33,16 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
         self._rnd_proc = ImagePreprocessor(
             rnd_hflip=True, rnd_colour=True, rnd_resize=[256, 480], resize=256,
             crop=224)
+        self._mutex = threading.Lock()
+        self.register_option('imagenet:dataset_folder')
         pass
 
     @property
     def folder(self):
+        if self._folder is None:
+            self._mutex.acquire()
+            self._folder = self.get_option('imagenet:dataset_folder')
+            self._mutex.release()
         return self._folder
 
     @property
@@ -44,22 +52,21 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
     @property
     def img_ids(self):
         if self._img_ids is None:
+            _img_ids = []
+            _labels = []
             image_folder = os.path.join(self.folder, self.split)
-            self._img_ids = []
             if self.split == 'train':
-                self._labels = []
                 folders = os.listdir(image_folder)
                 for ff in folders:
                     subfolder = os.path.join(image_folder, ff)
                     image_fnames = os.listdir(subfolder)
-                    self._img_ids.extend(image_fnames)
-                    self._labels.extend(
+                    _img_ids.extend(image_fnames)
+                    _labels.extend(
                         [synset.get_index(ff)] * len(image_fnames))
             elif self.split == 'valid' or self.split == 'test':
-                self._img_ids = os.listdir(image_folder)
-                self._img_ids = sorted(self._img_ids)
+                _img_ids = os.listdir(image_folder)
+                _img_ids = sorted(_img_ids)
                 if self.split == 'valid':
-                    self._labels = []
                     with open(os.path.join(
                             self.folder, 'synsets.txt'), 'r') as f_cls:
                         synsets = f_cls.readlines()
@@ -69,8 +76,12 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
                         labels = f_lab.readlines()
                     labels = [int(ll) for ll in labels]
                     slabels = [synsets[ll] for ll in labels]
-                    self._labels = [synset.get_index(sl) for sl in slabels]
-            self._labels = np.array(self._labels)
+                    _labels = [synset.get_index(sl) for sl in slabels]
+            _labels = np.array(_labels)
+            self._mutex.acquire()
+            self._img_ids = _img_ids
+            self._labels = _labels
+            self._mutex.release()
         return self._img_ids
 
     @property
