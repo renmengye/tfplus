@@ -62,7 +62,7 @@ class ImagePreprocessor(object):
         redraw: Whether to redraw random numbers used for random cropping, and
         horizontal flipping. Random colours have to be redrawn.
         """
-        image = image / 255
+        image = (image / 255).astype('float32')
         width = image.shape[1]
         height = image.shape[0]
         if redraw:
