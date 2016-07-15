@@ -47,7 +47,7 @@ class ImagePreprocessor(object):
             self.siz2 = (self.siz, height * ratio)
         else:
             ratio = self.siz / height
-            self.siz2 = (width * ratio, height)
+            self.siz2 = (width * ratio, self.siz)
         self.offset = [0.0, 0.0]
         self.offset[0] = int(self._random.uniform(
             0.0, self.siz2[0] - self._crop))
@@ -75,7 +75,7 @@ class ImagePreprocessor(object):
             offset = [offset, offset]
             hflip = False
 
-        image = cv2.resize(image, (siz, siz), interpolation=cv2.INTER_CUBIC)
+        image = cv2.resize(image, siz2, interpolation=cv2.INTER_CUBIC)
         image = image[offset[0]: self._crop + offset[0],
                       offset[1]: self._crop + offset[1], :]
         if hflip:
