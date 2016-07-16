@@ -202,7 +202,7 @@ if __name__ == '__main__':
         model.init(sess)
 
     # Initialize data.
-    def get_data(split, batch_size=128, cycle=True, max_queue_size=30,
+    def get_data(split, batch_size=128, cycle=True, max_queue_size=10,
                  num_threads=10):
         dp = tfplus.data.create_from_main(
             DATASET, split=split, mode=split).set_iter(
@@ -227,26 +227,26 @@ if __name__ == '__main__':
      .add_csv_output('Learning Rate', ['train'])
      .add_plot_output('Input (Train)', 'thumbnail', max_num_col=5)
      .add_plot_output('Input (Valid)', 'thumbnail', max_num_col=5)
-     .add_runner(
-        tfplus.runner.create_from_main('basic')
-        .set_name('plotter_train')
-        .set_outputs(['x_trans'])
-        .add_plot_listener('Input (Train)', {'x_trans': 'images'})
-        .set_data_provider(get_data('train', batch_size=10, cycle=True,
-                                    max_queue_size=10, num_threads=5))
-        .set_phase_train(True)
-        .set_offset(0)       # Every 500 steps (10 min)
-        .set_interval(50))
-     .add_runner(
-        tfplus.runner.create_from_main('basic')
-        .set_name('plotter_valid')
-        .set_outputs(['x_trans'])
-        .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
-        .set_data_provider(get_data('valid', batch_size=10, cycle=True,
-                                    max_queue_size=10, num_threads=5))
-        .set_phase_train(False)
-        .set_offset(0)       # Every 500 steps (10 min)
-        .set_interval(50))
+#      .add_runner(
+#         tfplus.runner.create_from_main('basic')
+#         .set_name('plotter_train')
+#         .set_outputs(['x_trans'])
+#         .add_plot_listener('Input (Train)', {'x_trans': 'images'})
+#         .set_data_provider(get_data('train', batch_size=10, cycle=True,
+#                                     max_queue_size=10, num_threads=5))
+#         .set_phase_train(True)
+#         .set_offset(0)       # Every 500 steps (10 min)
+#         .set_interval(50))
+#     .add_runner(
+#        tfplus.runner.create_from_main('basic')
+#        .set_name('plotter_valid')
+#        .set_outputs(['x_trans'])
+#        .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
+#        .set_data_provider(get_data('valid', batch_size=10, cycle=True,
+#                                    max_queue_size=10, num_threads=5))
+#        .set_phase_train(False)
+#        .set_offset(0)       # Every 500 steps (10 min)
+#        .set_interval(50))
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('train')
@@ -280,19 +280,19 @@ if __name__ == '__main__':
         .set_num_batch(10)
         .set_offset(100)
         .set_interval(20))     # Every 200 steps (4 min)
-     .add_runner(  # Full epoch evaluation on validation set.
-        tfplus.runner.create_from_main('average')
-        .set_name('valid')
-        .set_outputs(['acc', 'top5_acc'])
-        .add_csv_listener('Top 1 Accuracy', 'acc', 'valid')
-        .add_cmd_listener('Top 1 Accuracy', 'acc')
-        .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
-        .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
-        .set_data_provider(get_data('valid', batch_size=opt['batch_size'],
-                                    cycle=True))
-        .set_phase_train(False)
-        .set_num_batch(50000 / opt['batch_size'])
-        .set_offset(100)
-        .set_interval(1000))    # Every 10000 steps (200 min)
+#     .add_runner(  # Full epoch evaluation on validation set.
+#        tfplus.runner.create_from_main('average')
+#        .set_name('valid')
+#        .set_outputs(['acc', 'top5_acc'])
+#        .add_csv_listener('Top 1 Accuracy', 'acc', 'valid')
+#        .add_cmd_listener('Top 1 Accuracy', 'acc')
+#        .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
+#        .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
+#        .set_data_provider(get_data('valid', batch_size=opt['batch_size'],
+#                                    cycle=True))
+#        .set_phase_train(False)
+#        .set_num_batch(50000 / opt['batch_size'])
+#        .set_offset(100)
+#        .set_interval(1000))    # Every 10000 steps (200 min)
      ).run()
     pass
