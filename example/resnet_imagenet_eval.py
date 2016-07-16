@@ -76,7 +76,7 @@ if __name__ == '__main__':
      .set_logs_folder(os.path.join(opt['logs'], uid))
      .set_localhost(opt['localhost'])
      .restore_logs(opt['restore_logs'])
-     .add_csv_output('Loss', ['valids'])
+     .add_csv_output('Loss', ['valid'])
      .add_csv_output('Top 1 Accuracy', ['valid'])
      .add_csv_output('Top 5 Accuracy', ['valid'])
      .add_runner(
