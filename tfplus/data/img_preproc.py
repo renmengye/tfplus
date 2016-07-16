@@ -84,7 +84,7 @@ class ImagePreprocessor(object):
             image_out = tf.clip_by_value(image_out, 0.0, 1.0)
         return image_in, image_out
 
-    def get_resize(old_size, siz):
+    def get_resize(self, old_size, siz):
         width = old_size[0]
         height = old_size[1]
         if self.resize_base == 'short':
