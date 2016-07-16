@@ -159,7 +159,7 @@ class RestorerRunner(SessionRunner):
 
     def set_folder(self, value):
         self.folder = value
-        pass
+        return self
 
     def run_step(self):
         step = self.get_session().run(self.model.get_var('step'))
