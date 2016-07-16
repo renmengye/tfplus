@@ -110,7 +110,7 @@ class ImagePreprocessor(object):
 
     def redraw(self, old_size):
         siz = int(self.random.uniform(self.rnd_resize[0], self.rnd_resize[1]))
-        siz2 = self.get_resize(old_size, siz)
+        siz2, pad = self.get_resize(old_size, siz)
         siz3 = [siz2[0] + pad[0], siz2[1] + pad[1]]
         offset = [0.0, 0.0]
         offset[0] = int(self.random.uniform(0.0, siz3[0] - self.crop))
