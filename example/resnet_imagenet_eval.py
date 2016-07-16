@@ -98,7 +98,6 @@ if __name__ == '__main__':
                                     cycle=True))
         .set_phase_train(False)
         .set_num_batch(50000 / opt['batch_size'])
-        .set_offset(100)
         .set_interval(1))
      ).run()
     pass

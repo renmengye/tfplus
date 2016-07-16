@@ -153,8 +153,7 @@ class ImagePreprocessor(object):
             siz = self.resize
             short = min(width, height)
             lon = max(width, height)
-            resize, pad = get_resize((width, height), self.resize,
-                                     resize_base=resize_base)
+            resize, pad = get_resize((width, height), self.resize)
             offset = [0, 0]
             if self.resize_base == 'short':
                 offset[0] = int((resize[0] - self.crop) / 2)
