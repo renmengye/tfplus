@@ -101,7 +101,7 @@ class ImagePreprocessor(object):
             else:
                 siz2 = (siz, int(height / width * siz))
                 pad = [0.0, siz - siz2[1]]
-        else self.resize_base == 'squeeze':
+        elif self.resize_base == 'squeeze':
             siz2 = (siz, siz)
             pad = [0.0, 0.0]
         else:
