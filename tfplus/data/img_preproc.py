@@ -163,7 +163,7 @@ class ImagePreprocessor(object):
 
         image = cv2.resize(image, resize, interpolation=cv2.INTER_CUBIC)
         
-        if pad[0] > 0 or pad[1] > 0
+        if pad[0] > 0 or pad[1] > 0:
             image = np.pad(image, [[pad[1], pad[1]], [pad[0], pad[0]], [0, 0]])
 
         if image.shape[0] != self.crop or image.shape[1] != self.crop:
