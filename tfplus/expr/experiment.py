@@ -156,9 +156,13 @@ class TrainExperiment(Experiment):
         return self
 
     def run(self):
-        if 'train' not in self.runners:
-            raise Exception('Need to specify runner "train"')
-
+        default_runner = None
+        for runner in self.runners.itervalues():
+            if runner.interval == 1:
+                default_runner = runner
+        if default_runner is None:
+            raise Exception('Need at least one runner at interval 1.')
+        
         self.url = os.path.join(self.localhost, 'deep-dashboard') + '?id=' + \
             self.logs_folder.split('/')[-1]
 
@@ -175,7 +179,7 @@ class TrainExperiment(Experiment):
 
         # Counters
         count = 0
-        step = self.runners['train'].step
+        step = default_runner.step
 
         while step < self.get_option('num_steps'):
 
@@ -195,7 +199,7 @@ class TrainExperiment(Experiment):
                 pass
 
             count += 1
-            step = self.runners['train'].step
+            step = default_runner.step
             pass
 
         for runner in self.runners.itervalues():
