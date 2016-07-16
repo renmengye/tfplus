@@ -58,7 +58,7 @@ if __name__ == '__main__':
         raise Exception('Need to specify restore path.')
 
     # Initialize data.
-    def get_data(split, batch_size=128, cycle=True, max_queue_size=30,
+    def get_data(split, batch_size=128, cycle=True, max_queue_size=10,
                  num_threads=10):
         dp = tfplus.data.create_from_main(
             DATASET, split=split, mode=split).set_iter(
