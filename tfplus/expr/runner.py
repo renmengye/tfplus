@@ -151,8 +151,8 @@ get_factory().register('saver', SaverRunner)
 
 class RestorerRunner(SessionRunner):
 
-    def __init__(self):
-        super(RestorerRunner, self).__init__(folder=None)
+    def __init__(self, folder=None):
+        super(RestorerRunner, self).__init__()
         self._log = logger.get()
         self.folder = folder
         pass
@@ -162,6 +162,8 @@ class RestorerRunner(SessionRunner):
         pass
 
     def run_step(self):
+        step = self.get_session().run(self.model.get_var('step'))
+        step = int(step)
         self._log.info('Restoring checkpoint')
         self.model.restore_weights_from(self.get_session(), self.folder)
         pass
