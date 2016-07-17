@@ -165,6 +165,7 @@ class RestorerRunner(SessionRunner):
         step = self.get_session().run(self.model.get_var('step'))
         step = int(step)
         self._log.info('Restoring checkpoint')
+        self.model = None
         self.model.restore_weights_from(self.get_session(), self.folder)
         pass
     pass
@@ -229,9 +230,9 @@ class BasicRunner(SessionRunner):
         return self
 
     def finalize(self):
-        for key, value in self.loggers.items():
-            value.close()
-            pass
+        # for key, value in self.loggers.items():
+        #     value.close()
+        #     pass
         pass
 
     @property
@@ -382,12 +383,15 @@ class AverageRunner(BasicRunner):
             pass
         results['step_time'] = 0.0
 
+        stop_flag = False
+
         # Run each batch.
         for bb in xrange(self.num_batch):
             try:
                 inp = self.data_provider.get_batch()
             except StopIteration:
-                return False
+                stop_flag = True
+                break
             _results = self._run_step(inp)
             bat_sz = inp[inp.keys()[0]].shape[0]
             bat_sz_total += bat_sz
@@ -406,6 +410,8 @@ class AverageRunner(BasicRunner):
         results['step'] = self.step
         self.write_log(results)
 
-        return True
+        if stop_flag:
+            raise StopIteration
+        pass
 
 get_factory().register('average', AverageRunner)

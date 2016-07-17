@@ -320,6 +320,8 @@ class ResNet(GraphBuilder):
                     pass
                 pass
             pass
+        # for k in sorted(results.keys()):
+        #     print k
         return results
     pass
 

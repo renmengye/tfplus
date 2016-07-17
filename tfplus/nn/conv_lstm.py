@@ -105,8 +105,9 @@ class ConvLSTM(GraphBuilder):
         state = inp['state']
 
         with tf.variable_scope(self.scope):
-            c = tf.slice(state, [0, 0], [-1, self.hid_depth])
-            h = tf.slice(state, [0, self.hid_depth], [-1, self.hid_depth])
+            c = tf.slice(state, [0, 0, 0, 0], [-1, -1, -1, self.hid_depth])
+            h = tf.slice(state, [0, 0, 0, self.hid_depth],
+                         [-1, -1, -1, self.hid_depth])
             g_i = tf.sigmoid(Conv2D(self.w_xi)(x) +
                              Conv2D(self.w_hi)(h) + self.b_i)
             g_f = tf.sigmoid(Conv2D(self.w_xf)(x) +

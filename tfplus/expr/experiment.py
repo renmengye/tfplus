@@ -180,8 +180,9 @@ class TrainExperiment(Experiment):
         # Counters
         count = 0
         step = default_runner.step
+        stop_flag = False
 
-        while step < self.get_option('num_steps'):
+        while step < self.get_option('num_steps') and not stop_flag:
 
             # Runners
             for name, runner in self.runners.items():
@@ -189,7 +190,10 @@ class TrainExperiment(Experiment):
                     if runner.interval > 1:
                         self.log.info('Runner "{}"'.format(name))
                         pass
-                    runner.run_step()
+                    try:
+                        runner.run_step()
+                    except StopIteration:
+                        stop_flag = True
                     pass
                 pass
 

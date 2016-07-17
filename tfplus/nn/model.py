@@ -136,6 +136,7 @@ class Model(GraphBuilder, OptionBase):
         """Restore the weights.
         WARNING: Call only after built the graph.
         """
+        # print '3', self.name
         if folder is not None:
             save_vars = self.get_save_var_dict()
             if len(save_vars) > 0:
@@ -313,7 +314,9 @@ class Model(GraphBuilder, OptionBase):
         with tf.device(self.get_device_fn()):
             with tf.variable_scope(self.name):
                 inp_var = self.build_input()
-                self.build(inp_var)
+                output_var = self.build(inp_var)
+                gs = self.global_step
+                loss_var = self.build_loss(inp_var, output_var)
         return self
 
     def build_all(self):
@@ -422,7 +425,9 @@ class ContainerModel(Model):
         return super(ContainerModel, self).restore_options_from(folder)
 
     def restore_weights_from(self, sess, folder):
+        # print '1'
         for m in self.sub_models:
+            # print '2', m.name
             m.restore_weights_from(sess, folder)
             pass
         return super(ContainerModel, self).restore_weights_from(sess, folder)
