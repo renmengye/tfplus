@@ -227,16 +227,16 @@ if __name__ == '__main__':
      .add_csv_output('Learning Rate', ['train'])
      .add_plot_output('Input (Train)', 'thumbnail', max_num_col=5)
      .add_plot_output('Input (Valid)', 'thumbnail', max_num_col=5)
-#      .add_runner(
-#         tfplus.runner.create_from_main('basic')
-#         .set_name('plotter_train')
-#         .set_outputs(['x_trans'])
-#         .add_plot_listener('Input (Train)', {'x_trans': 'images'})
-#         .set_data_provider(get_data('train', batch_size=10, cycle=True,
-#                                     max_queue_size=10, num_threads=5))
-#         .set_phase_train(True)
-#         .set_offset(0)       # Every 500 steps (10 min)
-#         .set_interval(50))
+     .add_runner(
+        tfplus.runner.create_from_main('basic')
+        .set_name('plotter_train')
+        .set_outputs(['x_trans'])
+        .add_plot_listener('Input (Train)', {'x_trans': 'images'})
+        .set_data_provider(get_data('train', batch_size=10, cycle=True,
+                                    max_queue_size=10, num_threads=5))
+        .set_phase_train(True)
+        .set_offset(0)       # Every 500 steps (10 min)
+        .set_interval(50))
 #     .add_runner(
 #        tfplus.runner.create_from_main('basic')
 #        .set_name('plotter_valid')

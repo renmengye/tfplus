@@ -142,11 +142,13 @@ class ImagePreprocessor(object):
         offset_ = rnd_package['offset']
         resize_ = rnd_package['resize']
         hflip_ = rnd_package['hflip']
+        pad_ = rnd_package['pad']
 
         if rnd:
             # Random resize, random crop
             resize = resize_
             offset = offset_
+            pad = pad_
             hflip = hflip_ and self.rnd_hflip
         else:
             # Fixed resize, center crop
