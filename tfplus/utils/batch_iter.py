@@ -84,7 +84,7 @@ class BatchIterator(object):
 
             # Calc start/end based on current step.
             start = self._batch_size * self._step
-            end = min(self._num, self._batch_size * (self._step + 1))
+            end = self._batch_size * (self._step + 1)
 
             # Progress bar.
             if self._pb is not None:
@@ -97,6 +97,7 @@ class BatchIterator(object):
             self._mutex.release()
 
         if not self._cycle:
+            end = min(self._num, end)
             idx = np.arange(start, end)
             if self.get_fn is not None:
                 return self.get_fn(idx)
@@ -120,6 +121,7 @@ class BatchIterator(object):
                 return idx
         pass
 
-# if __name__ == '__main__':
-# for ii in BatchIterator(400, batch_size=32, progress_bar=True, get_fn=lambda x: x, cycle=False, shuffle=False):
-#     print ii
+if __name__ == '__main__':
+    for ii in BatchIterator(400, batch_size=32, progress_bar=True, 
+        get_fn=lambda x: x, cycle=True, shuffle=False):
+        print ii
