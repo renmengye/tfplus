@@ -98,19 +98,19 @@ class ImagePreprocessor(object):
         elif self.resize_base == 'long':
             # For now, just centre padding...
             if width < height:
-                siz2 = (int(width / height * siz), siz)
+                siz2 = (int(width / height * siz / 2) * 2, siz)
                 ratio = [siz / height, siz / height]
-                pad = [siz - siz2[0], 0]
+                pad = [int((siz - siz2[0]) / 2), 0]
             else:
-                siz2 = (siz, int(height / width * siz))
+                siz2 = (siz, int(height / width * siz / 2) * 2)
                 ratio = [siz / width, siz / width]
-                pad = [0, siz - siz2[1]]
+                pad = [0, int((siz - siz2[1]) / 2)]
         elif self.resize_base == 'squeeze':
             siz2 = (siz, siz)
             pad = [0, 0]
             ratio = [siz / width, siz / height]
         else:
-            raise Exception('Unknown resize base {}'.format(resize_base))
+            raise Exception('Unknown resize base {}'.format(self.resize_base))
         return siz2, pad, ratio
 
     def redraw(self, old_size):
@@ -120,7 +120,7 @@ class ImagePreprocessor(object):
         offset = [0.0, 0.0]
         offset[0] = int(self.random.uniform(0.0, siz3[0] - self.crop))
         offset[1] = int(self.random.uniform(0.0, siz3[1] - self.crop))
-        hflip = bool(self.random.uniform(0, 1))
+        hflip = self.random.uniform(0, 1) > 0.5
         return {
             'offset': offset,
             'pad': pad,
@@ -129,7 +129,7 @@ class ImagePreprocessor(object):
             'hflip': hflip
         }
 
-    def process(self, image, rnd=True, resize_base='short', rnd_package=None):
+    def process(self, image, rnd=True, rnd_package=None):
         """Process the images.
 
         redraw: Whether to redraw random numbers used for random cropping, and
@@ -183,7 +183,7 @@ class ImagePreprocessor(object):
 
         if rnd and self.rnd_colour and image.shape[-1] == 3:
             image = self.sess.run(self.image_out, feed_dict={
-                                  self.image_in: image})
+                self.image_in: image})
         # RGB => BGR
         image = image[:, :, [2, 1, 0]]
 

@@ -29,7 +29,7 @@ class ResNet(GraphBuilder):
     def __init__(self, layers, channels, strides, bottleneck=False,
                  dilation=False, wd=None, scope='res_net',
                  shortcut='projection', initialization='msra',
-                 compatible=False):
+                 compatible=False, trainable=False):
         super(ResNet, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -45,6 +45,7 @@ class ResNet(GraphBuilder):
         self.dilation = dilation
         self.shortcut = shortcut
         self.compatible = compatible
+        self.trainable = trainable
         self.wd = wd
         if bottleneck:
             self.unit_depth = 3
@@ -121,7 +122,8 @@ class ResNet(GraphBuilder):
                                         [1, 1, ch_in, ch_out], wd=self.wd,
                                         name='w',
                                         stddev=self.compute_std(
-                                            [1, 1, ch_in, ch_out])
+                                            [1, 1, ch_in, ch_out]),
+                                        trainable=self.trainable
                                     )
                                 pass
                             pass
@@ -134,7 +136,8 @@ class ResNet(GraphBuilder):
                                         [f_, f_, ch_in_, ch_out_], wd=self.wd,
                                         name='w',
                                         stddev=self.compute_std(
-                                            [f_, f_, ch_in_, ch_out_])
+                                            [f_, f_, ch_in_, ch_out_]),
+                                        trainable=self.trainable
                                     )
                                     self.log.info('Init SD: {}'.format(
                                         self.compute_std(
@@ -209,7 +212,8 @@ class ResNet(GraphBuilder):
                                                 0, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][0],
                                                    stride=s)(h)
-                                        self.bn[ii][jj][0] = BatchNorm(ch_out_)
+                                        self.bn[ii][jj][0] = BatchNorm(
+                                            ch_out_, frozen=not self.trainable)
                                         h = self.bn[ii][jj][0](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -219,7 +223,8 @@ class ResNet(GraphBuilder):
                                             self.compute_in_out(
                                                 1, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][1])(h)
-                                        self.bn[ii][jj][1] = BatchNorm(ch_out_)
+                                        self.bn[ii][jj][1] = BatchNorm(
+                                            ch_out_, frozen=not self.trainable)
                                         h = self.bn[ii][jj][1](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -229,7 +234,8 @@ class ResNet(GraphBuilder):
                                             self.compute_in_out(
                                                 2, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][2])(h)
-                                        self.bn[ii][jj][2] = BatchNorm(ch_out_)
+                                        self.bn[ii][jj][2] = BatchNorm(
+                                            ch_out_, frozen=not self.trainable)
                                         h = self.bn[ii][jj][2](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -240,7 +246,8 @@ class ResNet(GraphBuilder):
                                                 0, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][0],
                                                    stride=s)(h)
-                                        self.bn[ii][jj][0] = BatchNorm(ch_out_)
+                                        self.bn[ii][jj][0] = BatchNorm(
+                                            ch_out_, frozen=not self.trainable)
                                         h = self.bn[ii][jj][0](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -250,7 +257,8 @@ class ResNet(GraphBuilder):
                                             self.compute_in_out(
                                                 1, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][1])(h)
-                                        self.bn[ii][jj][1] = BatchNorm(ch_out_)
+                                        self.bn[ii][jj][1] = BatchNorm(
+                                            ch_out_, frozen=not self.trainable)
                                         h = self.bn[ii][jj][1](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -262,7 +270,8 @@ class ResNet(GraphBuilder):
                                     with tf.variable_scope('unit_{}'.format(kk)):
                                         f_, ch_in_, ch_out_ = self.compute_in_out(
                                             kk, ch_in, ch_out)
-                                        self.bn[ii][jj][kk] = BatchNorm(ch_in_)
+                                        self.bn[ii][jj][kk] = BatchNorm(
+                                            ch_in_, frozen=not self.trainable)
                                         h = self.bn[ii][jj][kk](
                                             {'input': h,
                                              'phase_train': phase_train})

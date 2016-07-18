@@ -40,7 +40,7 @@ class Conv2D(GraphBuilder):
 class Conv2DW(GraphBuilder):
 
     def __init__(self, f, ch_in, ch_out, stride=1, wd=None, scope='conv',
-                 initialization='msra', bias=True):
+                 initialization='msra', bias=True, trainable=True):
         super(Conv2DW, self).__init__()
         self.stride = stride
         self.f = f
@@ -49,6 +49,7 @@ class Conv2DW(GraphBuilder):
         self.scope = scope
         self.wd = wd
         self.bias = bias
+        self.trainable = trainable
         if initialization == 'msra':
             self.compute_std = lambda s: np.sqrt(2 / s[0] / s[1] / s[3])
         else:
@@ -58,9 +59,11 @@ class Conv2DW(GraphBuilder):
     def init_var(self):
         self.w = self.declare_var(
             [self.f, self.f, self.ch_in, self.ch_out], name='w', wd=self.wd,
-            stddev=self.compute_std([self.f, self.f, self.ch_in, self.ch_out]))
+            stddev=self.compute_std([self.f, self.f, self.ch_in, self.ch_out]),
+            trainable=self.trainable)
         if self.bias:
-            self.b = self.declare_var([self.ch_out], name='b', stddev=0)
+            self.b = self.declare_var(
+                [self.ch_out], name='b', stddev=0, trainable=self.trainable)
         pass
 
     def build(self, inp):
@@ -84,20 +87,22 @@ class Conv2DW(GraphBuilder):
 
 class Linear(GraphBuilder):
 
-    def __init__(self, d_in, d_out, wd=None, scope='linear', bias=True):
+    def __init__(self, d_in, d_out, wd=None, scope='linear', bias=True, trainable=True):
         super(Linear, self).__init__()
         self.d_in = d_in
         self.d_out = d_out
         self.wd = wd
         self.scope = scope
         self.bias = bias
+        self.trainable = trainable
         pass
 
     def init_var(self):
         self.w = self.declare_var(
-            [self.d_in, self.d_out], name='w', wd=self.wd)
+            [self.d_in, self.d_out], name='w', wd=self.wd, trainable=self.trainable)
         if self.bias:
-            self.b = self.declare_var([self.d_out], name='b', wd=self.wd)
+            self.b = self.declare_var(
+                [self.d_out], name='b', wd=self.wd, trainable=self.trainable)
         pass
 
     def build(self, inp):

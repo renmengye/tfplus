@@ -28,6 +28,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
         self.set_default_option('weight_decay', 0.00004)
         self.set_default_option('compatible', False)
         self.set_default_option('subtract_mean', False)
+        self.set_default_option('trainable', True)
         pass
 
     def init_var(self):
@@ -41,18 +42,21 @@ class ResNetImageNetModel(tfplus.nn.Model):
         bottleneck = self.get_option('bottleneck')
         shortcut = self.get_option('shortcut')
         compatible = self.get_option('compatible')
+        trainable = self.get_option('trainable')
         self.conv1 = Conv2DW(
             f=7, ch_in=inp_depth, ch_out=channels[0], stride=2, wd=wd,
-            scope='conv', bias=False)
+            scope='conv', bias=False, trainable=trainable)
         self.res_net = ResNet(layers=layers,
                               channels=channels,
                               strides=strides,
                               bottleneck=bottleneck,
                               shortcut=shortcut,
                               compatible=compatible,
+                              trainable=trainable,
                               wd=wd)
         self.fc = Linear(d_in=channels[-1],
-                         d_out=num_classes, wd=wd, scope='fc', bias=True)
+                         d_out=num_classes, wd=wd, scope='fc', bias=True,
+                         trainable=trainable)
         pass
 
     def build_input(self):
@@ -79,7 +83,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
         else:
             x = x * 2.0 - 1.0       # center at [-1, 1].
         h = self.conv1(x)
-        self.bn1 = BatchNorm(h.get_shape()[-1])
+        self.bn1 = BatchNorm(h.get_shape()[-1], trainable=self.trainable)
         h = self.bn1({'input': h, 'phase_train': phase_train})
         h = tf.nn.relu(h)
         h = MaxPool(3, stride=2)(h)
