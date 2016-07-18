@@ -89,28 +89,33 @@ class ImagePreprocessor(object):
         height = old_size[1]
         if self.resize_base == 'short':
             if width < height:
+                ratio = [siz / width, siz / width]
                 siz2 = (siz, int(height / width * siz))
             else:
+                ratio = [siz / height, siz / height]
                 siz2 = (int(width / height * siz), siz)
-            pad = [0.0, 0.0]
+            pad = [0, 0]
         elif self.resize_base == 'long':
             # For now, just centre padding...
             if width < height:
                 siz2 = (int(width / height * siz), siz)
-                pad = [siz - siz2[0], 0.0]
+                ratio = [siz / height, siz / height]
+                pad = [siz - siz2[0], 0]
             else:
                 siz2 = (siz, int(height / width * siz))
-                pad = [0.0, siz - siz2[1]]
+                ratio = [siz / width, siz / width]
+                pad = [0, siz - siz2[1]]
         elif self.resize_base == 'squeeze':
             siz2 = (siz, siz)
-            pad = [0.0, 0.0]
+            pad = [0, 0]
+            ratio = [siz / width, siz / height]
         else:
             raise Exception('Unknown resize base {}'.format(resize_base))
-        return siz2, pad
+        return siz2, pad, ratio
 
     def redraw(self, old_size):
         siz = int(self.random.uniform(self.rnd_resize[0], self.rnd_resize[1]))
-        siz2, pad = self.get_resize(old_size, siz)
+        siz2, pad, ratio = self.get_resize(old_size, siz)
         siz3 = [siz2[0] + pad[0], siz2[1] + pad[1]]
         offset = [0.0, 0.0]
         offset[0] = int(self.random.uniform(0.0, siz3[0] - self.crop))
@@ -119,6 +124,7 @@ class ImagePreprocessor(object):
         return {
             'offset': offset,
             'pad': pad,
+            'ratio': ratio,
             'resize': siz2,
             'hflip': hflip
         }
@@ -155,7 +161,7 @@ class ImagePreprocessor(object):
             siz = self.resize
             short = min(width, height)
             lon = max(width, height)
-            resize, pad = self.get_resize((width, height), self.resize)
+            resize, pad, ratio = self.get_resize((width, height), self.resize)
             offset = [0, 0]
             if self.resize_base == 'short':
                 offset[0] = int((resize[0] - self.crop) / 2)
@@ -163,9 +169,10 @@ class ImagePreprocessor(object):
             hflip = False
 
         image = cv2.resize(image, resize, interpolation=cv2.INTER_CUBIC)
-        
+
         if pad[0] > 0 or pad[1] > 0:
-            image = np.pad(image, [[pad[1], pad[1]], [pad[0], pad[0]], [0, 0]])
+            image = np.pad(image, [[pad[1], pad[1]], [pad[0], pad[0]], [0, 0]],
+                           'constant', constant_values=(0,))
 
         if image.shape[0] != self.crop or image.shape[1] != self.crop:
             image = image[offset[1]: self.crop + offset[1],

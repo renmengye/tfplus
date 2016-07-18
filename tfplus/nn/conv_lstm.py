@@ -118,7 +118,7 @@ class ConvLSTM(GraphBuilder):
                         Conv2D(self.w_hu)(h) + self.b_u)
             c = g_f * c + g_i * u
             h = g_o * tf.tanh(c)
-            state = tf.concat(1, [c, h])
+            state = tf.concat(3, [c, h])
 
         return {'state': state}
 

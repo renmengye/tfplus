@@ -65,7 +65,7 @@ if __name__ == '__main__':
                          .set_gpu(opt['gpu'])
                          .set_folder(results_folder)
                          .restore_options_from(opt['restore_model'])
-                         .build_eval()
+                         .build_loss_eval()
                          )
                 if opt['restore_model'] is None:
                     raise Exception('Need to specify restore path.')

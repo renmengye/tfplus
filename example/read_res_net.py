@@ -19,17 +19,17 @@ def load_image(path, size=224):
     xx = int((img.shape[1] - short_edge) / 2)
     crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
     resized_img = skimage.transform.resize(crop_img, (size, size))
-    resized_img = resized_img[:, :, [2, 1, 0]] * 255.
+    resized_img = resized_img[:, :, [2, 1, 0]]
     return resized_img
 
 
 def print_prob(prob):
     pred = np.argsort(prob)[::-1]
     top1 = tfplus.data.synset.get_label(pred[0])
-    print "Top1: "
+    print 'Top 1:'
     print top1, prob[pred[0]]
     top5 = [tfplus.data.synset.get_label(pred[i]) for i in xrange(5)]
-    print "Top 5:"
+    print 'Top 5:'
     for ii, tt in enumerate(top5):
         print tt, prob[pred[ii]]
     return top1
@@ -46,16 +46,18 @@ if __name__ == '__main__':
         'compatible': True,
         'weight_decay': 1e-4,
         'subtract_mean': True
-    }).build_eval()
+    })
+    inp_var = resnet.build_input()
+    out_var = resnet.build(inp_var)
 
     saver = tf.train.Saver(resnet.get_save_var_dict())
     saver.restore(sess, os.path.join(folder, 'res_152.ckpt'))
 
-
     img = load_image(os.path.join(folder, 'data/cat.jpg'))
     batch = img.reshape((1, 224, 224, 3))
-    y_out = sess.run(resnet.get_var('_y_out'), feed_dict={
-                     resnet.get_var('x'): batch,
-                     resnet.get_var('phase_train'): False})
+    y_out = sess.run(out_var, feed_dict={
+                     inp_var['x']: batch,
+                     inp_var['phase_train']: False})
 
     print_prob(y_out[0])
+    resnet.set_folder('/ais/gobi4/mren/data/imagenet/res152').save(sess)

@@ -75,10 +75,9 @@ class ResNetImageNetModel(tfplus.nn.Model):
         phase_train = inp['phase_train']
         subtract_mean = self.get_option('subtract_mean')
         if subtract_mean:
-            x = x - self._img_mean  # raw 0-255 values.
+            x = x * 255.0 - self._img_mean  # raw 0-255 values.
         else:
             x = x * 2.0 - 1.0       # center at [-1, 1].
-        self.register_var('_minus0', x)
         h = self.conv1(x)
         self.bn1 = BatchNorm(h.get_shape()[-1])
         h = self.bn1({'input': h, 'phase_train': phase_train})
@@ -91,7 +90,6 @@ class ResNetImageNetModel(tfplus.nn.Model):
         self.log.info('Before FC shape: {}'.format(h.get_shape()))
         y_out = self.fc(h)
         y_out = tf.nn.softmax(y_out)
-        self.register_var('_y_out', y_out)
         return y_out
 
     def get_save_var_dict(self):

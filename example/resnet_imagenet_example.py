@@ -12,6 +12,7 @@ import tfplus
 import tfplus.data.mnist
 import tfplus.data.cifar10
 import tfplus.data.imagenet
+from tfplus.utils import BatchIterator, ConcurrentBatchIterator
 
 from resnet_imagenet_model import ResNetImageNetModel
 
@@ -201,17 +202,24 @@ if __name__ == '__main__':
     else:
         model.init(sess)
 
+    data = {}
+    for split in ['train', 'valid']:
+        data[split] = tfplus.data.create_from_main(
+            DATASET, split=split, mode=split)
+
     # Initialize data.
-    def get_data(split, batch_size=128, cycle=True, max_queue_size=10,
+    def get_iter(split, batch_size=128, cycle=True, max_queue_size=10,
                  num_threads=10):
-        dp = tfplus.data.create_from_main(
-            DATASET, split=split, mode=split).set_iter(
-            batch_size=batch_size, cycle=cycle)
+        batch_iter = BatchIterator(
+            num=data[split].get_size(), progress_bar=False, shuffle=True,
+            batch_size=batch_size, cycle=cycle,
+            get_fn=data[split].get_batch_idx)
         if opt['prefetch']:
-            return tfplus.data.ConcurrentDataProvider(
-                dp, max_queue_size=max_queue_size, num_threads=num_threads)
+            return ConcurrentBatchIterator(
+                batch_iter, max_queue_size=max_queue_size,
+                num_threads=num_threads)
         else:
-            return dp
+            return batch_iter
 
     # Initialize experiment.
     (tfplus.experiment.create_from_main('train')
@@ -232,21 +240,21 @@ if __name__ == '__main__':
         .set_name('plotter_train')
         .set_outputs(['x_trans'])
         .add_plot_listener('Input (Train)', {'x_trans': 'images'})
-        .set_data_provider(get_data('train', batch_size=10, cycle=True,
-                                    max_queue_size=10, num_threads=5))
+        .set_iter(get_iter('train', batch_size=10, cycle=True,
+                           max_queue_size=10, num_threads=5))
         .set_phase_train(True)
         .set_offset(0)       # Every 500 steps (10 min)
         .set_interval(50))
-#     .add_runner(
-#        tfplus.runner.create_from_main('basic')
-#        .set_name('plotter_valid')
-#        .set_outputs(['x_trans'])
-#        .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
-#        .set_data_provider(get_data('valid', batch_size=10, cycle=True,
-#                                    max_queue_size=10, num_threads=5))
-#        .set_phase_train(False)
-#        .set_offset(0)       # Every 500 steps (10 min)
-#        .set_interval(50))
+     #     .add_runner(
+     #        tfplus.runner.create_from_main('basic')
+     #        .set_name('plotter_valid')
+     #        .set_outputs(['x_trans'])
+     #        .add_plot_listener('Input (Valid)', {'x_trans': 'images'})
+     #        .set_iter(get_iter('valid', batch_size=10, cycle=True,
+     #                                    max_queue_size=10, num_threads=5))
+     #        .set_phase_train(False)
+     #        .set_offset(0)       # Every 500 steps (10 min)
+     #        .set_interval(50))
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('train')
@@ -256,8 +264,7 @@ if __name__ == '__main__':
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_data_provider(get_data('train', batch_size=opt['batch_size'],
-                                    cycle=True))
+        .set_iter(get_iter('train', batch_size=opt['batch_size'], cycle=True))
         .set_phase_train(True)
         .set_num_batch(10)
         .set_interval(1))
@@ -274,25 +281,24 @@ if __name__ == '__main__':
         .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'train')
         .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
         .add_csv_listener('Learning Rate', 'learn_rate', 'train')
-        .set_data_provider(get_data('train', batch_size=opt['batch_size'],
-                                    cycle=True))
+        .set_iter(get_iter('train', batch_size=opt['batch_size'], cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_offset(100)
         .set_interval(20))     # Every 200 steps (4 min)
-#     .add_runner(  # Full epoch evaluation on validation set.
-#        tfplus.runner.create_from_main('average')
-#        .set_name('valid')
-#        .set_outputs(['acc', 'top5_acc'])
-#        .add_csv_listener('Top 1 Accuracy', 'acc', 'valid')
-#        .add_cmd_listener('Top 1 Accuracy', 'acc')
-#        .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
-#        .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
-#        .set_data_provider(get_data('valid', batch_size=opt['batch_size'],
-#                                    cycle=True))
-#        .set_phase_train(False)
-#        .set_num_batch(50000 / opt['batch_size'])
-#        .set_offset(100)
-#        .set_interval(1000))    # Every 10000 steps (200 min)
+     #     .add_runner(  # Full epoch evaluation on validation set.
+     #        tfplus.runner.create_from_main('average')
+     #        .set_name('valid')
+     #        .set_outputs(['acc', 'top5_acc'])
+     #        .add_csv_listener('Top 1 Accuracy', 'acc', 'valid')
+     #        .add_cmd_listener('Top 1 Accuracy', 'acc')
+     #        .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
+     #        .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
+     #        .set_iter(get_iter('valid', batch_size=opt['batch_size'],
+     #                                    cycle=True))
+     #        .set_phase_train(False)
+     #        .set_num_batch(50000 / opt['batch_size'])
+     #        .set_offset(100)
+     #        .set_interval(1000))    # Every 10000 steps (200 min)
      ).run()
     pass

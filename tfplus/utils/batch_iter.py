@@ -13,7 +13,18 @@ import progress_bar as pb
 import threading
 
 
-class BatchIterator(object):
+class IBatchIterator(object):
+
+    def __iter__(self):
+        """Get iterable."""
+        return self
+
+    def next(self):
+        raise Exception('Not implemented')
+    pass
+
+
+class BatchIterator(IBatchIterator):
 
     def __init__(self, num, batch_size=1, progress_bar=False, get_fn=None, cycle=False, shuffle=True, stagnant=False):
         """Construct a batch iterator.
@@ -122,6 +133,6 @@ class BatchIterator(object):
         pass
 
 if __name__ == '__main__':
-    for ii in BatchIterator(400, batch_size=32, progress_bar=True, 
-        get_fn=lambda x: x, cycle=True, shuffle=False):
+    for ii in BatchIterator(400, batch_size=32, progress_bar=True,
+                            get_fn=lambda x: x, cycle=True, shuffle=False):
         print ii

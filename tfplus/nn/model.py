@@ -77,6 +77,8 @@ class Model(GraphBuilder, OptionBase):
         return self._folder
 
     def set_folder(self, value):
+        if not os.path.exists(value):
+            os.makedirs(value)
         self._folder = value
         return self
 
@@ -306,7 +308,18 @@ class Model(GraphBuilder, OptionBase):
             self.register_var('step', self._global_step)
         return self._global_step
 
-    def build_eval(self):
+    # def build_eval(self):
+    #     """Build nodes for evaluation/inference."""
+    #     if self._has_built_all:
+    #         raise Exception('Only call build_all or build_eval once.')
+    #     self._has_built_all = True
+    #     with tf.device(self.get_device_fn()):
+    #         with tf.variable_scope(self.name):
+    #             inp_var = self.build_input()
+    #             output_var = self.build(inp_var)
+    #     return self
+
+    def build_loss_eval(self):
         """Build nodes for evaluation/inference."""
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')

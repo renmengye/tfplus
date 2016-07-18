@@ -178,6 +178,7 @@ class BasicRunner(SessionRunner):
     def __init__(self):
         super(BasicRunner, self).__init__()
         self._step = 0
+        # self._iter = None
         self._data_provider = None
         self._phase_train = True
         self._outputs = []
@@ -252,15 +253,26 @@ class BasicRunner(SessionRunner):
         return self
 
     @property
-    def data_provider(self):
-        return self._data_provider
+    def iter(self):
+        return self._iter
 
-    def get_data_provider(self):
-        return self._data_provider
+    def get_iter(self):
+        return self._iter
 
-    def set_data_provider(self, value):
-        self._data_provider = value
+    def set_iter(self, value):
+        self._iter = value
         return self
+
+    # @property
+    # def data_provider(self):
+    #     return self._data_provider
+
+    # def get_data_provider(self):
+    #     return self._data_provider
+
+    # def set_data_provider(self, value):
+    #     self._data_provider = value
+    #     return self
 
     @property
     def outputs(self):
@@ -308,25 +320,25 @@ class BasicRunner(SessionRunner):
     def get_feed_dict(self, inp):
         inp = self._preprocessor(inp)
         feed_dict = {self.model.get_input_var('phase_train'): self.phase_train}
-        set_var = False
+        # set_var = False
         for key in inp.iterkeys():
             if self.model.has_input_var(key):
                 feed_dict[self.model.get_input_var(key)] = inp[key]
                 pass
-            else:
-                self.log.warning(
-                    'Ignoring input variable "{}".'.format(key))
-                set_var = True
-                pass
-        if set_var:
-            # Set a subset of variables.
-            if self.data_provider.variables is None:
-                self.data_provider.set_variables(
-                    self.model.get_all_input_vars().keys())
-                self.log.warning('Setting input variable list: {}'.format(
-                    self.data_provider.variables))
-                pass
-            pass
+            # else:
+            #     self.log.warning(
+            #         'Ignoring input variable "{}".'.format(key))
+            #     set_var = True
+            #     pass
+        # if set_var:
+        #     # Set a subset of variables.
+        #     if self.data_provider.variables is None:
+        #         self.data_provider.set_variables(
+        #             self.model.get_all_input_vars().keys())
+        #         self.log.warning('Setting input variable list: {}'.format(
+        #             self.data_provider.variables))
+        #         pass
+        #     pass
         return feed_dict
 
     def run_model(self, inp):
@@ -340,7 +352,8 @@ class BasicRunner(SessionRunner):
 
     def run_step(self):
         try:
-            inp = self.data_provider.get_batch()
+            # inp = self.data_provider.get_batch()
+            inp = self.iter.next()
         except StopIteration:
             return False
         results = self._run_step(inp)
@@ -388,7 +401,8 @@ class AverageRunner(BasicRunner):
         # Run each batch.
         for bb in xrange(self.num_batch):
             try:
-                inp = self.data_provider.get_batch()
+                # inp = self.data_provider.get_batch()
+                inp = self.iter.next()
             except StopIteration:
                 stop_flag = True
                 break
