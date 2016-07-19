@@ -52,9 +52,7 @@ if __name__ == '__main__':
     })
     inp_var = resnet.build_input()
     out_var = resnet.build(inp_var)
-
-    saver = tf.train.Saver(resnet.get_save_var_dict())
-    saver.restore(sess, os.path.join(folder, 'res_152.ckpt'))
+    resnet.restore_weights_from(sess, '/ais/gobi4/mren/data/imagenet/res152')
 
     img = load_image(os.path.join(folder, 'data/cat.jpg'))
     batch = img.reshape((1, 224, 224, 3))
@@ -63,4 +61,4 @@ if __name__ == '__main__':
                      inp_var['phase_train']: False})
 
     print_prob(y_out[0])
-    resnet.set_folder('/ais/gobi4/mren/data/imagenet/res152').save(sess)
+    # resnet.set_folder('/ais/gobi4/mren/data/imagenet/res152').save(sess)
