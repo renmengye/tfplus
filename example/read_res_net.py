@@ -2,6 +2,7 @@ import cslab_environ
 
 import numpy as np
 import os
+import cv2
 import skimage.io
 import skimage.transform
 import tensorflow as tf
@@ -13,13 +14,15 @@ folder = '/u/mren/third_party/tensorflow-resnet'
 
 
 def load_image(path, size=224):
-    img = skimage.io.imread(path)
+    # img = skimage.io.imread(path)
+    img = cv2.imread(path) / 255.0
     short_edge = min(img.shape[:2])
     yy = int((img.shape[0] - short_edge) / 2)
     xx = int((img.shape[1] - short_edge) / 2)
     crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
-    resized_img = skimage.transform.resize(crop_img, (size, size))
-    resized_img = resized_img[:, :, [2, 1, 0]]
+    resized_img = cv2.resize(crop_img, (size, size))
+    # resized_img = skimage.transform.resize(crop_img, (size, size))
+    # resized_img = resized_img[:, :, [2, 1, 0]]
     return resized_img
 
 
