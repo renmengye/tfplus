@@ -5,14 +5,14 @@ import tensorflow as tf
 class LSTM(GraphBuilder):
 
     def __init__(self, inp_dim, hid_dim, wd=None, scope='lstm',
-                 init_weights=None, frozen=False):
+                 init_weights=None, trainalbe=True):
         super(LSTM, self).__init__()
         self.inp_dim = inp_dim
         self.hid_dim = hid_dim
         self.wd = wd
         self.scope = scope
         self.init_w = init_weights
-        self.frozen = frozen
+        self.trainalbe = trainalbe
         pass
 
     def init_var(self):
@@ -26,7 +26,7 @@ class LSTM(GraphBuilder):
                       'w_hu', 'b_u', 'w_xo', 'w_ho', 'b_o']:
                 self.init_w[w] = None
 
-        trainable = not self.frozen
+        trainable = self.trainable
         self.log.info('Trainable: {}'.format(trainable))
 
         with tf.variable_scope(self.scope):

@@ -5,7 +5,7 @@ import tensorflow as tf
 class BatchNorm(GraphBuilder):
 
     def __init__(self, n_out, scope='bn',
-                 affine=True, init_beta=None, init_gamma=None, frozen=False,
+                 affine=True, init_beta=None, init_gamma=None, trainable=True,
                  decay=0.9):
         super(BatchNorm, self).__init__()
         self.n_out = n_out
@@ -13,18 +13,17 @@ class BatchNorm(GraphBuilder):
         self.affine = affine
         self.init_beta = init_beta
         self.init_gamma = init_gamma
-        self.frozen = frozen
+        self.trainable = trainable
         self.decay = decay
         pass
 
     def init_var(self):
-        trainable = not self.frozen
+        trainable = self.trainable
         with tf.variable_scope(self.scope):
             if self.init_beta is None:
                 self.init_beta = tf.constant(0.0, shape=[self.n_out])
             if self.init_gamma is None:
                 self.init_gamma = tf.constant(1.0, shape=[self.n_out])
-
             self.beta = self.declare_var(
                 [self.n_out], init_val=self.init_beta, name='beta',
                 trainable=trainable)

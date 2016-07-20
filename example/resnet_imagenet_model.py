@@ -4,7 +4,7 @@ import numpy as np
 import tfplus
 import tensorflow as tf
 
-from tfplus.nn import ResNet, MaxPool, AvgPool, BatchNorm, Linear, Conv2DW
+from tfplus.nn import ResNetSBN, MaxPool, AvgPool, BatchNorm, Linear, Conv2DW
 
 
 class ResNetImageNetModel(tfplus.nn.Model):
@@ -46,14 +46,15 @@ class ResNetImageNetModel(tfplus.nn.Model):
         self.conv1 = Conv2DW(
             f=7, ch_in=inp_depth, ch_out=channels[0], stride=2, wd=wd,
             scope='conv', bias=False, trainable=trainable)
-        self.res_net = ResNet(layers=layers,
-                              channels=channels,
-                              strides=strides,
-                              bottleneck=bottleneck,
-                              shortcut=shortcut,
-                              compatible=compatible,
-                              trainable=trainable,
-                              wd=wd)
+        self.bn1 = BatchNorm(channels[0], trainable=trainable)
+        self.res_net = ResNetSBN(layers=layers,
+                                 channels=channels,
+                                 strides=strides,
+                                 bottleneck=bottleneck,
+                                 shortcut=shortcut,
+                                 compatible=compatible,
+                                 trainable=trainable,
+                                 wd=wd)
         self.fc = Linear(d_in=channels[-1],
                          d_out=num_classes, wd=wd, scope='fc', bias=True,
                          trainable=trainable)
@@ -85,16 +86,19 @@ class ResNetImageNetModel(tfplus.nn.Model):
         h = self.conv1(x)
         trainable = self.get_option('trainable')
         h = tf.Print(h, [100, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
-        self.bn1 = BatchNorm(h.get_shape()[-1], frozen=not trainable)
         h = self.bn1({'input': h, 'phase_train': phase_train})
-        h = tf.Print(h, [101, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
+        h = tf.Print(h, [101, tf.reduce_mean(
+            h), tf.reduce_max(h), tf.reduce_min(h)])
         h = tf.nn.relu(h)
-        h = tf.Print(h, [102, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
+        h = tf.Print(h, [102, tf.reduce_mean(
+            h), tf.reduce_max(h), tf.reduce_min(h)])
         h = MaxPool(3, stride=2)(h)
-        h = tf.Print(h, [103, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
+        h = tf.Print(h, [103, tf.reduce_mean(
+            h), tf.reduce_max(h), tf.reduce_min(h)])
         self.log.info('Before ResNet shape: {}'.format(h.get_shape()))
         h = self.res_net({'input': h, 'phase_train': phase_train})
-        h = tf.Print(h, [104, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
+        h = tf.Print(h, [104, tf.reduce_mean(
+            h), tf.reduce_max(h), tf.reduce_min(h)])
         self.log.info('Before AvgPool shape: {}'.format(h.get_shape()))
         h = tf.reduce_mean(h, [1, 2])
         self.log.info('Before FC shape: {}'.format(h.get_shape()))

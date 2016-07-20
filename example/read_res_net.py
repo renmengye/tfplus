@@ -48,7 +48,8 @@ if __name__ == '__main__':
         'shortcut': 'projection',
         'compatible': True,
         'weight_decay': 1e-4,
-        'subtract_mean': True
+        'subtract_mean': True,
+        'trainable': False
     })
     inp_var = resnet.build_input()
     out_var = resnet.build(inp_var)

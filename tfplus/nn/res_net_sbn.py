@@ -7,8 +7,12 @@ from ops import Conv2D, DilatedConv2D, MaxPool, AvgPool
 import numpy as np
 import tensorflow as tf
 
+"""
+A version of the res net that shares the BN (for the purpose of non-RNN usage).
+"""
 
-class ResNet(GraphBuilder):
+
+class ResNetSBN(GraphBuilder):
     """
     Each stage represents a different activation map size.
     Each layer represents a residual connection.
@@ -30,7 +34,7 @@ class ResNet(GraphBuilder):
                  dilation=False, wd=None, scope='res_net',
                  shortcut='projection', initialization='msra',
                  compatible=False, trainable=False):
-        super(ResNet, self).__init__()
+        super(ResNetSBN, self).__init__()
         self.channels = channels
         self.layers = layers
         self.strides = strides
@@ -39,7 +43,7 @@ class ResNet(GraphBuilder):
         self.w = [None] * self.num_stage
         self.bn = [None] * self.num_stage
         self.shortcut_w = [None] * self.num_stage
-        # self.shortcut_bn = [None] * self.num_stage
+        self.shortcut_bn = [None] * self.num_stage
         # self.b = [None] * self.num_stage
         self.bottleneck = bottleneck
         self.dilation = dilation
@@ -82,13 +86,12 @@ class ResNet(GraphBuilder):
             ch_out_ = ch_out
         return f_, ch_in_, ch_out_
 
-    def apply_shortcut(self, prev_inp, ch_in, ch_out, phase_train=None, w=None, stride=None):
+    def apply_shortcut(self, prev_inp, ch_in, ch_out, phase_train=None, w=None, bn=None, stride=None):
         if self.shortcut == 'projection':
             if self.dilation:
                 prev_inp = DilatedConv2D(w, rate=stride)(prev_inp)
             else:
                 prev_inp = Conv2D(w, stride=stride)(prev_inp)
-            bn = BatchNorm(ch_out)
             prev_inp = bn({'input': prev_inp, 'phase_train': phase_train})
         elif self.shortcut == 'identity':
             pad_ch = ch_out - ch_in
@@ -97,10 +100,9 @@ class ResNet(GraphBuilder):
             prev_inp = tf.pad(prev_inp, [[0, 0], [0, 0], [0, 0], [0, pad_ch]])
             if stride > 1:
                 prev_inp = AvgPool(stride)(prev_inp)
-            bn = None
         self.log.info('After proj shape: {}'.format(
             prev_inp.get_shape()))
-        return prev_inp, bn
+        return prev_inp
 
     def init_var(self):
         with tf.variable_scope(self.scope):
@@ -109,12 +111,14 @@ class ResNet(GraphBuilder):
                 ch_out = self.channels[ii + 1]
                 with tf.variable_scope('stage_{}'.format(ii)):
                     self.w[ii] = [None] * self.layers[ii]
+                    self.bn[ii] = [None] * self.layers[ii]
                     # self.b[ii] = [None] * self.layers[ii]
                     for jj in xrange(self.layers[ii]):
                         if jj > 0:
                             ch_in = ch_out
                             pass
                         self.w[ii][jj] = [None] * self.unit_depth
+                        self.bn[ii][jj] = [None] * self.unit_depth
                         # self.b[ii][jj] = [None] * self.unit_depth
 
                         if jj == 0 and (ch_in != ch_out or self.compatible):
@@ -127,6 +131,8 @@ class ResNet(GraphBuilder):
                                             [1, 1, ch_in, ch_out]),
                                         trainable=self.trainable
                                     )
+                                    self.shortcut_bn[ii] = BatchNorm(
+                                        ch_out, trainable=self.trainable)
                                 pass
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
@@ -141,6 +147,8 @@ class ResNet(GraphBuilder):
                                             [f_, f_, ch_in_, ch_out_]),
                                         trainable=self.trainable
                                     )
+                                    self.bn[ii][jj][kk] = BatchNorm(
+                                        ch_out_, trainable=self.trainable)
                                     self.log.info('Init SD: {}'.format(
                                         self.compute_std(
                                             [f_, f_, ch_in_, ch_out_])))
@@ -161,8 +169,6 @@ class ResNet(GraphBuilder):
         x = inp['input']
         phase_train = inp['phase_train']
         prev_inp = x
-        # copy = {}
-        # copy['shortcut_bn'] = [None] * num_stage
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
                 print 'Stage count', ii, 'of', self.num_stage
@@ -170,7 +176,6 @@ class ResNet(GraphBuilder):
                 ch_out = self.channels[ii + 1]
                 s = self.strides[ii]
                 with tf.variable_scope('stage_{}'.format(ii)):
-                    # self.bn[ii] = [None] * self.layers[ii]
                     for jj in xrange(self.layers[ii]):
                         print 'Layer count', jj, 'of', self.layers[ii]
                         h = prev_inp
@@ -182,21 +187,21 @@ class ResNet(GraphBuilder):
                             if self.compatible:
                                 # In compatible mode, always project.
                                 with tf.variable_scope('shortcut'):
-                                    prev_inp, proj_bn = self.apply_shortcut(
+                                    prev_inp = self.apply_shortcut(
                                         prev_inp, ch_in, ch_out,
                                         phase_train=phase_train,
                                         w=self.shortcut_w[ii],
+                                        bn=self.shortcut_bn[ii],
                                         stride=s)
-                                    self.shortcut_bn[ii] = proj_bn
                             else:
                                 if ch_in != ch_out:
                                     with tf.variable_scope('shortcut'):
-                                        prev_inp, proj_bn = self.apply_shortcut(
+                                        prev_inp = self.apply_shortcut(
                                             prev_inp, ch_in, ch_out,
                                             phase_train=phase_train,
                                             w=self.shortcut_w[ii],
+                                            bn=self.shortcut_bn[ii],
                                             stride=s)
-                                        self.shortcut_bn[ii] = proj_bn
                                 elif s != 1:
                                     if not self.dilation:
                                         prev_inp = AvgPool(s)(prev_inp)
@@ -204,7 +209,6 @@ class ResNet(GraphBuilder):
                                             prev_inp.get_shape()))
 
                         with tf.variable_scope('layer_{}'.format(jj)):
-                            self.bn[ii][jj] = [None] * self.unit_depth
 
                             if self.compatible:
                                 # A compatible graph for building weights
@@ -216,8 +220,6 @@ class ResNet(GraphBuilder):
                                                 0, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][0],
                                                    stride=s)(h)
-                                        self.bn[ii][jj][0] = BatchNorm(
-                                            ch_out_, trainable=self.trainable)
                                         h = self.bn[ii][jj][0](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -227,8 +229,6 @@ class ResNet(GraphBuilder):
                                             self.compute_in_out(
                                                 1, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][1])(h)
-                                        self.bn[ii][jj][1] = BatchNorm(
-                                            ch_out_, trainable=self.trainable)
                                         h = self.bn[ii][jj][1](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -238,8 +238,6 @@ class ResNet(GraphBuilder):
                                             self.compute_in_out(
                                                 2, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][2])(h)
-                                        self.bn[ii][jj][2] = BatchNorm(
-                                            ch_out_, trainable=self.trainable)
                                         h = self.bn[ii][jj][2](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -250,8 +248,6 @@ class ResNet(GraphBuilder):
                                                 0, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][0],
                                                    stride=s)(h)
-                                        self.bn[ii][jj][0] = BatchNorm(
-                                            ch_out_, trainable=self.trainable)
                                         h = self.bn[ii][jj][0](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -261,8 +257,6 @@ class ResNet(GraphBuilder):
                                             self.compute_in_out(
                                                 1, ch_in, ch_out)
                                         h = Conv2D(self.w[ii][jj][1])(h)
-                                        self.bn[ii][jj][1] = BatchNorm(
-                                            ch_out_, trainable=self.trainable)
                                         h = self.bn[ii][jj][1](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -274,8 +268,6 @@ class ResNet(GraphBuilder):
                                     with tf.variable_scope('unit_{}'.format(kk)):
                                         f_, ch_in_, ch_out_ = self.compute_in_out(
                                             kk, ch_in, ch_out)
-                                        self.bn[ii][jj][kk] = BatchNorm(
-                                            ch_in_, trainable=self.trainable)
                                         h = self.bn[ii][jj][kk](
                                             {'input': h,
                                              'phase_train': phase_train})
@@ -325,7 +317,6 @@ class ResNet(GraphBuilder):
                 for kk in xrange(self.unit_depth):
                     prefix = 'stage_{}/layer_{}/unit_{}/'.format(ii, jj, kk)
                     results[prefix + 'w'] = self.w[ii][jj][kk]
-                    # results[prefix + 'b'] = self.b[ii][jj][kk]
                     bn = self.bn[ii][jj][kk]
                     if bn is not None:
                         self.add_prefix_to(

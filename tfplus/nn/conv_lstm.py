@@ -7,7 +7,7 @@ import tensorflow as tf
 class ConvLSTM(GraphBuilder):
 
     def __init__(self, filter_size, inp_depth, hid_depth, wd=None, scope='lstm',
-                 init_weights=None, frozen=False):
+                 init_weights=None, trainable=False):
         super(ConvLSTM, self).__init__()
         self.filter_size = filter_size
         self.inp_depth = inp_depth
@@ -15,7 +15,7 @@ class ConvLSTM(GraphBuilder):
         self.wd = wd
         self.scope = scope
         self.init_w = init_weights
-        self.frozen = frozen
+        self.trainable = trainable
         pass
 
     def init_var(self):
@@ -29,7 +29,7 @@ class ConvLSTM(GraphBuilder):
                       'w_hu', 'b_u', 'w_xo', 'w_ho', 'b_o']:
                 self.init_w[w] = None
 
-        trainable = not self.frozen
+        trainable = self.trainable
         self.log.info('Trainable: {}'.format(trainable))
 
         with tf.variable_scope(self.scope):
