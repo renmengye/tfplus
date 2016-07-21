@@ -145,8 +145,8 @@ class MNISTDataProvider(data_provider.DataProvider):
             self.init_data()
         if self.split == 'train':
             return {
-                'x': self._images[VALIDATION_SIZE + idx],
-                'y_gt': self._labels[VALIDATION_SIZE + idx]
+                'x': self._images[VALIDATION_SIZE + numpy.array(idx)],
+                'y_gt': self._labels[VALIDATION_SIZE + numpy.array(idx)]
             }
         else:
             return {
