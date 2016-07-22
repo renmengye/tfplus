@@ -39,8 +39,7 @@ class ResNet(GraphBuilder):
         self.w = [None] * self.num_stage
         self.bn = [None] * self.num_stage
         self.shortcut_w = [None] * self.num_stage
-        # self.shortcut_bn = [None] * self.num_stage
-        # self.b = [None] * self.num_stage
+        self.shortcut_bn = [None] * self.num_stage
         self.bottleneck = bottleneck
         self.dilation = dilation
         self.shortcut = shortcut
@@ -170,7 +169,7 @@ class ResNet(GraphBuilder):
                 ch_out = self.channels[ii + 1]
                 s = self.strides[ii]
                 with tf.variable_scope('stage_{}'.format(ii)):
-                    # self.bn[ii] = [None] * self.layers[ii]
+                    self.bn[ii] = [None] * self.layers[ii]
                     for jj in xrange(self.layers[ii]):
                         print 'Layer count', jj, 'of', self.layers[ii]
                         h = prev_inp

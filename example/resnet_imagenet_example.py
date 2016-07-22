@@ -9,8 +9,6 @@ import numpy as np
 import os
 import tensorflow as tf
 import tfplus
-import tfplus.data.mnist
-import tfplus.data.cifar10
 import tfplus.data.imagenet
 from tfplus.utils import BatchIterator, ConcurrentBatchIterator
 
@@ -202,12 +200,12 @@ if __name__ == '__main__':
     else:
         model.init(sess)
 
+    # Initialize data.
     data = {}
-    for split in ['train', 'valid']:
+    for split in ['train']:
         data[split] = tfplus.data.create_from_main(
             DATASET, split=split, mode=split)
 
-    # Initialize data.
     def get_iter(split, batch_size=128, cycle=True, max_queue_size=10,
                  num_threads=10):
         batch_iter = BatchIterator(
