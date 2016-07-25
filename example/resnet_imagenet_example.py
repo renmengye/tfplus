@@ -21,6 +21,7 @@ MODEL_NAME = 'resnet_imagenet_example'
 NUM_CLS = 1000
 
 # Main options
+tfplus.cmd_args.add('id', 'str', None)
 tfplus.cmd_args.add('gpu', 'int', -1)
 tfplus.cmd_args.add('results', 'str', '../results')
 tfplus.cmd_args.add('logs', 'str', '../logs')
@@ -177,7 +178,10 @@ if __name__ == '__main__':
     opt = tfplus.cmd_args.make()
 
     # Initialize logging/saving folder.
-    uid = tfplus.nn.model.gen_id(UID_PREFIX)
+    if opt['id'] is None:
+        uid = tfplus.nn.model.gen_id(UID_PREFIX)
+    else:
+        uid = opt['id']
     logs_folder = os.path.join(opt['logs'], uid)
     log = tfplus.utils.logger.get(os.path.join(logs_folder, 'raw'))
     tfplus.utils.LogManager(logs_folder).register('raw', 'plain', 'Raw Logs')
