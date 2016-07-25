@@ -21,7 +21,7 @@ class SampleDataProvider(DataProvider):
     def get_batch_idx(self, idx, **kwargs):
         new_idx = self.reject(idx)
         if len(new_idx) > 0:
-            return self.data_provider.get_batch_idx(idx, **kwargs)
+            return self.data_provider.get_batch_idx(new_idx, **kwargs)
         else:
-            return self.data_provider.get_batch_idx([idx[0]], **kwargs)
+            return self.data_provider.get_batch_idx([new_idx[0]], **kwargs)
         pass

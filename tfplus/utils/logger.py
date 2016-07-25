@@ -21,6 +21,7 @@ import datetime
 import inspect
 import os
 import sys
+import threading
 import traceback
 
 TERM_COLOR = {
@@ -39,6 +40,7 @@ TERM_COLOR = {
 }
 
 log = None
+log_lock = threading.Lock()
 
 
 def get(fname=None):
@@ -159,6 +161,8 @@ class Logger(object):
             raise Exception('Unknown verbose value: {}'.format(verbose))
         # print((self.verbose_thresh, type(self.verbose_thresh), verbose, type(verbose)))
 
+
+        log_lock.acquire()
         if self.verbose_thresh >= verbose:
             print(printstr)
 
@@ -166,6 +170,7 @@ class Logger(object):
             with open(self.filename, 'a') as f:
                 f.write(logstr)
                 f.write('\n')
+        log_lock.release()
         pass
 
     def info(self, message, verbose=None):
