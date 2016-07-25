@@ -85,20 +85,20 @@ class ResNetImageNetModel(tfplus.nn.Model):
             x = x * 2.0 - 1.0       # center at [-1, 1].
         h = self.conv1(x)
         trainable = self.get_option('trainable')
-        h = tf.Print(h, [100, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
+        # h = tf.Print(h, [100, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
         h = self.bn1({'input': h, 'phase_train': phase_train})
-        h = tf.Print(h, [101, tf.reduce_mean(
-            h), tf.reduce_max(h), tf.reduce_min(h)])
+        # h = tf.Print(h, [101, tf.reduce_mean(
+        #     h), tf.reduce_max(h), tf.reduce_min(h)])
         h = tf.nn.relu(h)
-        h = tf.Print(h, [102, tf.reduce_mean(
-            h), tf.reduce_max(h), tf.reduce_min(h)])
+        # h = tf.Print(h, [102, tf.reduce_mean(
+        #     h), tf.reduce_max(h), tf.reduce_min(h)])
         h = MaxPool(3, stride=2)(h)
-        h = tf.Print(h, [103, tf.reduce_mean(
-            h), tf.reduce_max(h), tf.reduce_min(h)])
+        # h = tf.Print(h, [103, tf.reduce_mean(
+        #     h), tf.reduce_max(h), tf.reduce_min(h)])
         self.log.info('Before ResNet shape: {}'.format(h.get_shape()))
         h = self.res_net({'input': h, 'phase_train': phase_train})
-        h = tf.Print(h, [104, tf.reduce_mean(
-            h), tf.reduce_max(h), tf.reduce_min(h)])
+        # h = tf.Print(h, [104, tf.reduce_mean(
+        #     h), tf.reduce_max(h), tf.reduce_min(h)])
         self.log.info('Before AvgPool shape: {}'.format(h.get_shape()))
         h = tf.reduce_mean(h, [1, 2])
         self.log.info('Before FC shape: {}'.format(h.get_shape()))

@@ -9,11 +9,9 @@ import numpy as np
 import os
 import tensorflow as tf
 import tfplus
-import tfplus.data.mnist
-import tfplus.data.cifar10
 import tfplus.data.imagenet
+from tfplus.utils import BatchIterator, ConcurrentBatchIterator
 import time
-
 import resnet_imagenet_example
 
 tfplus.init('Eval a 50-layer ResNet on ImageNet')
@@ -23,6 +21,7 @@ MODEL_NAME = 'resnet_imagenet_example'
 NUM_CLS = 1000
 
 # Main options
+tfplus.cmd_args.add('id', 'str', None)
 tfplus.cmd_args.add('gpu', 'int', -1)
 tfplus.cmd_args.add('results', 'str', '../results')
 tfplus.cmd_args.add('logs', 'str', '../logs')
@@ -35,23 +34,33 @@ if __name__ == '__main__':
     opt = tfplus.cmd_args.make()
 
     # Initialize logging/saving folder.
-    uid = tfplus.nn.model.gen_id(UID_PREFIX)
+    if opt['id'] is None:
+        uid = tfplus.nn.model.gen_id(UID_PREFIX)
+    else:
+        uid = opt['id']
     logs_folder = os.path.join(opt['logs'], uid)
     log = tfplus.utils.logger.get(os.path.join(logs_folder, 'raw'))
     tfplus.utils.LogManager(logs_folder).register('raw', 'plain', 'Raw Logs')
     results_folder = os.path.join(opt['results'], uid)
 
     # Initialize data.
-    def get_data(split, batch_size=128, cycle=True, max_queue_size=10,
-                 num_threads=10):
-        dp = tfplus.data.create_from_main(
-            DATASET, split=split, mode=split).set_iter(
-            batch_size=batch_size, cycle=cycle)
+    data = {}
+    for split in ['valid']:
+        data[split] = tfplus.data.create_from_main(
+            DATASET, split=split, mode=split)
+
+    def get_iter(split, batch_size=128, cycle=True, max_queue_size=20,
+                 num_threads=20):
+        batch_iter = BatchIterator(
+            num=data[split].get_size(), progress_bar=False, shuffle=True,
+            batch_size=batch_size, cycle=cycle,
+            get_fn=data[split].get_batch_idx)
         if opt['prefetch']:
-            return tfplus.data.ConcurrentDataProvider(
-                dp, max_queue_size=max_queue_size, num_threads=num_threads)
+            return ConcurrentBatchIterator(
+                batch_iter, max_queue_size=max_queue_size,
+                num_threads=num_threads)
         else:
-            return dp
+            return batch_iter
 
     # Keep running eval.
     while True:
@@ -107,9 +116,8 @@ if __name__ == '__main__':
                     .add_cmd_listener('Top 1 Accuracy', 'acc')
                     .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
                     .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
-                    .set_data_provider(get_data('valid',
-                                                batch_size=opt['batch_size'],
-                                                cycle=False))
+                    .set_iter(get_iter('valid', batch_size=opt['batch_size'],
+                                       cycle=False))
                     .set_phase_train(False)
                     .set_num_batch(500000)   # Just something more than needed.
                     .set_interval(1))

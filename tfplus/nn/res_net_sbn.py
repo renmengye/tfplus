@@ -119,7 +119,6 @@ class ResNetSBN(GraphBuilder):
                             pass
                         self.w[ii][jj] = [None] * self.unit_depth
                         self.bn[ii][jj] = [None] * self.unit_depth
-                        # self.b[ii][jj] = [None] * self.unit_depth
 
                         if jj == 0 and (ch_in != ch_out or self.compatible):
                             if self.shortcut == 'projection':
@@ -147,8 +146,12 @@ class ResNetSBN(GraphBuilder):
                                             [f_, f_, ch_in_, ch_out_]),
                                         trainable=self.trainable
                                     )
+                                    if self.compatible:
+                                        bn_ch = ch_out_
+                                    else:
+                                        bn_ch = ch_in_
                                     self.bn[ii][jj][kk] = BatchNorm(
-                                        ch_out_, trainable=self.trainable)
+                                        bn_ch, trainable=self.trainable)
                                     self.log.info('Init SD: {}'.format(
                                         self.compute_std(
                                             [f_, f_, ch_in_, ch_out_])))
@@ -171,19 +174,22 @@ class ResNetSBN(GraphBuilder):
         prev_inp = x
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
-                print 'Stage count', ii, 'of', self.num_stage
+                self.log.info(
+                    'Stage count {:d} of {:d}'.format(ii, self.num_stage))
                 ch_in = self.channels[ii]
                 ch_out = self.channels[ii + 1]
                 s = self.strides[ii]
                 with tf.variable_scope('stage_{}'.format(ii)):
                     for jj in xrange(self.layers[ii]):
-                        print 'Layer count', jj, 'of', self.layers[ii]
+                        self.log.info('Layer count {:d} of {:d}'.format(
+                            jj, self.layers[ii]))
                         h = prev_inp
                         if jj > 0:
                             ch_in = ch_out
                         else:
                             # First unit of the layer.
-                            print 'In', ch_in, 'Out', ch_out
+                            self.log.info(
+                                'In {:d} Out {:d}'.format(ch_in, ch_out))
                             if self.compatible:
                                 # In compatible mode, always project.
                                 with tf.variable_scope('shortcut'):
@@ -324,8 +330,6 @@ class ResNetSBN(GraphBuilder):
                     pass
                 pass
             pass
-        # for k in sorted(results.keys()):
-        #     print k
         return results
     pass
 
