@@ -98,6 +98,8 @@ class ThumbnailPlotter(Plotter):
                 ax = axarr[row]
             elif num_col > 1:
                 ax = axarr[col]
+            else:
+                ax = axarr
             if x.shape[-1] == 3:
                 x = x[:, :, [2, 1, 0]]
             elif x.shape[-1] == 1:
@@ -144,6 +146,8 @@ class ThumbnailPlotter(Plotter):
                     ax = axarr[row]
                 elif num_col > 1:
                     ax = axarr[col]
+                else:
+                    ax = axarr
                 ax.set_axis_off()
         pass
 

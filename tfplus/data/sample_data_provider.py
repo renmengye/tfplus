@@ -18,8 +18,13 @@ class SampleDataProvider(DataProvider):
         """
         raise Exception('Not implemented')
 
+    def get_size(self):
+        return self.data_provider.get_size()
+
     def get_batch_idx(self, idx, **kwargs):
+        print 'start'
         new_idx = self.reject(idx)
+        print 'end'
         if len(new_idx) > 0:
             return self.data_provider.get_batch_idx(new_idx, **kwargs)
         else:
