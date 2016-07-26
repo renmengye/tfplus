@@ -13,7 +13,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
         super(ResNetImageNetModel, self).__init__(name=name)
         self.nlayers = nlayers
         self._img_mean = np.array(
-            [103.062623801, 115.902882574, 123.151630838], dtype='float32')
+            [103.062623801, 115.902882574, 123.151630838], dtype='float')
         pass
 
     def init_default_options(self):
@@ -42,6 +42,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
         bottleneck = self.get_option('bottleneck')
         shortcut = self.get_option('shortcut')
         compatible = self.get_option('compatible')
+        print 'Compatible', compatible
         trainable = self.get_option('trainable')
         self.conv1 = Conv2DW(
             f=7, ch_in=inp_depth, ch_out=channels[0], stride=2, wd=wd,
@@ -83,25 +84,23 @@ class ResNetImageNetModel(tfplus.nn.Model):
             x = x * 255.0 - self._img_mean  # raw 0-255 values.
         else:
             x = x * 2.0 - 1.0       # center at [-1, 1].
-        h = self.conv1(x)
+        self.register_var('x_sub', x)
+
+        self.w1 = tf.Variable(tf.constant_initializer(0.0)([7, 7, 3, 64]))
+        h = tf.nn.conv2d(x, self.w1, [1, 2, 2, 1], padding='SAME')
+
+        # h = self.conv1(x)
+
+        self.register_var('h_conv1', h)
         trainable = self.get_option('trainable')
-        # h = tf.Print(h, [100, tf.reduce_mean(h), tf.reduce_max(h), tf.reduce_min(h)])
+        
         h = self.bn1({'input': h, 'phase_train': phase_train})
-        # h = tf.Print(h, [101, tf.reduce_mean(
-        #     h), tf.reduce_max(h), tf.reduce_min(h)])
+        self.register_var('h_bn1', h)
         h = tf.nn.relu(h)
-        # h = tf.Print(h, [102, tf.reduce_mean(
-        #     h), tf.reduce_max(h), tf.reduce_min(h)])
         h = MaxPool(3, stride=2)(h)
-        # h = tf.Print(h, [103, tf.reduce_mean(
-        #     h), tf.reduce_max(h), tf.reduce_min(h)])
-        self.log.info('Before ResNet shape: {}'.format(h.get_shape()))
         h = self.res_net({'input': h, 'phase_train': phase_train})
-        # h = tf.Print(h, [104, tf.reduce_mean(
-        #     h), tf.reduce_max(h), tf.reduce_min(h)])
-        self.log.info('Before AvgPool shape: {}'.format(h.get_shape()))
+        self.register_var('h_last', h)
         h = tf.reduce_mean(h, [1, 2])
-        self.log.info('Before FC shape: {}'.format(h.get_shape()))
         y_out = self.fc(h)
         y_out = tf.nn.softmax(y_out)
         return y_out
@@ -110,7 +109,9 @@ class ResNetImageNetModel(tfplus.nn.Model):
         results = {}
         if self.has_var('step'):
             results['step'] = self.get_var('step')
-        self.add_prefix_to('conv1', self.conv1.get_save_var_dict(), results)
+        # self.add_prefix_to('conv1', self.conv1.get_save_var_dict(), results)
+        results['conv1/w'] = self.w1
+
         self.add_prefix_to('bn1', self.bn1.get_save_var_dict(), results)
         self.add_prefix_to(
             'res_net', self.res_net.get_save_var_dict(), results)

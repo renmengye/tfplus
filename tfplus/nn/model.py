@@ -87,7 +87,7 @@ class Model(GraphBuilder, OptionBase):
 
     @property
     def device(self):
-        if self.gpu > 0:
+        if self.gpu >= 0:
             return '/gpu:{}'.format(self.gpu)
         else:
             return '/cpu:0'

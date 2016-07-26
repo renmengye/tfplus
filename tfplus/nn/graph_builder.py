@@ -63,9 +63,9 @@ class GraphBuilder(object):
                 initializer = tf.constant_initializer(0.0)
         if init_val is None:
             var = tf.Variable(
-                initializer(shape), name=name, trainable=trainable)
+                initializer(shape), name=name, trainable=trainable, dtype='float')
         else:
-            var = tf.Variable(init_val, name=name, trainable=trainable)
+            var = tf.Variable(init_val, name=name, trainable=trainable, dtype='float')
         if wd is not None:
             weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
             tf.add_to_collection('losses', weight_decay)

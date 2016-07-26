@@ -10,20 +10,27 @@ import tfplus
 
 from resnet_imagenet_model import ResNetImageNetModel
 
-folder = '/u/mren/third_party/tensorflow-resnet'
-
 
 def load_image(path, size=224):
-    # img = skimage.io.imread(path)
-    img = cv2.imread(path) / 255.0
-    short_edge = min(img.shape[:2])
-    yy = int((img.shape[0] - short_edge) / 2)
-    xx = int((img.shape[1] - short_edge) / 2)
-    crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
-    resized_img = cv2.resize(crop_img, (size, size))
-    # resized_img = skimage.transform.resize(crop_img, (size, size))
-    # resized_img = resized_img[:, :, [2, 1, 0]]
-    return resized_img
+    image = skimage.io.imread(path)
+    short_edge = min(image.shape[:2])
+    yy = int((image.shape[0] - short_edge) / 2)
+    xx = int((image.shape[1] - short_edge) / 2)
+    image = image[yy:yy + short_edge, xx:xx + short_edge]
+    image = skimage.transform.resize(image, (size, size))
+    return image
+
+
+# def load_image(path, size=224):
+#     # img = skimage.io.imread(path)
+#     img = cv2.imread(path).astype('float32') / 255
+#     short_edge = min(img.shape[:2])
+#     yy = int((img.shape[0] - short_edge) / 2)
+#     xx = int((img.shape[1] - short_edge) / 2)
+#     crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
+#     resized_img = cv2.resize(crop_img, (size, size))
+#     resized_img = resized_img[:, :, [2, 1, 0]]
+#     return resized_img
 
 
 def print_prob(prob):
@@ -55,9 +62,12 @@ if __name__ == '__main__':
     out_var = resnet.build(inp_var)
 
     # resnet.restore_weights_from(sess, '/ais/gobi4/mren/data/imagenet/res152')
-    folder = '/users/mren/third_party/tensorflow-resnet'
+    # folder = '/users/mren/third_party/tensorflow-resnet'
+    folder = '/u/mren/third_party/tensorflow-resnet'
     saver = tf.train.Saver(resnet.get_save_var_dict())
-    saver.restore(sess, os.path.join(folder, 'ResNet-L152.ckpt'))
+    # saver.restore(sess, os.path.join(folder, 'ResNet-L152.ckpt'))
+    saver.restore(
+        sess, '/ais/gobi4/mren/data/imagenet/res152/resnet_imagenet.ckpt-0')
 
     img = load_image(os.path.join(folder, 'data/cat.jpg'))
     batch = img.reshape((1, 224, 224, 3))
@@ -66,5 +76,5 @@ if __name__ == '__main__':
                      inp_var['phase_train']: False})
 
     print_prob(y_out[0])
-    resnet.set_folder('/users/mren/data/imagenet/res152').save(sess)
+    # resnet.set_folder('/users/mren/data/imagenet/res152').save(sess)
     # resnet.set_folder('/ais/gobi4/mren/data/imagenet/res152').save(sess)

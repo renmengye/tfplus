@@ -114,7 +114,6 @@ class ResNet(GraphBuilder):
                             ch_in = ch_out
                             pass
                         self.w[ii][jj] = [None] * self.unit_depth
-                        # self.b[ii][jj] = [None] * self.unit_depth
 
                         if jj == 0 and (ch_in != ch_out or self.compatible):
                             if self.shortcut == 'projection':
@@ -155,13 +154,14 @@ class ResNet(GraphBuilder):
             pass
         pass
 
+    def build_layer(ii, jj):
+        pass
+
     def build(self, inp):
         self.lazy_init_var()
         x = inp['input']
         phase_train = inp['phase_train']
         prev_inp = x
-        # copy = {}
-        # copy['shortcut_bn'] = [None] * num_stage
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
                 print 'Stage count', ii, 'of', self.num_stage
@@ -170,6 +170,7 @@ class ResNet(GraphBuilder):
                 s = self.strides[ii]
                 with tf.variable_scope('stage_{}'.format(ii)):
                     self.bn[ii] = [None] * self.layers[ii]
+                    print 'H1'
                     for jj in xrange(self.layers[ii]):
                         print 'Layer count', jj, 'of', self.layers[ii]
                         h = prev_inp
@@ -221,6 +222,8 @@ class ResNet(GraphBuilder):
                                             {'input': h,
                                              'phase_train': phase_train})
                                         h = tf.nn.relu(h)
+                                        self.register_var(
+                                            'stage_{}/layer_{}/unit_{}/relu'.format(ii, jj, 0), h)
                                     with tf.variable_scope('unit_1'):
                                         f_, ch_in_, ch_out_ = \
                                             self.compute_in_out(
@@ -232,6 +235,9 @@ class ResNet(GraphBuilder):
                                             {'input': h,
                                              'phase_train': phase_train})
                                         h = tf.nn.relu(h)
+                                        print 'stage_{}/layer_{}/unit_{}/relu'.format(ii, jj, 1)
+                                        self.register_var(
+                                            'stage_{}/layer_{}/unit_{}/relu'.format(ii, jj, 1), h)
                                     with tf.variable_scope('unit_2'):
                                         f_, ch_in_, ch_out_ = \
                                             self.compute_in_out(
@@ -242,6 +248,9 @@ class ResNet(GraphBuilder):
                                         h = self.bn[ii][jj][2](
                                             {'input': h,
                                              'phase_train': phase_train})
+                                        print 'stage_{}/layer_{}/unit_{}/relu'.format(ii, jj, 2)
+                                        self.register_var(
+                                            'stage_{}/layer_{}/unit_{}/relu'.format(ii, jj, 2), h)
                                 else:
                                     with tf.variable_scope('unit_0'):
                                         f_, ch_in_, ch_out_ = \

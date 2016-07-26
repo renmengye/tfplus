@@ -100,6 +100,7 @@ class ResNetSBN(GraphBuilder):
             prev_inp = tf.pad(prev_inp, [[0, 0], [0, 0], [0, 0], [0, pad_ch]])
             if stride > 1:
                 prev_inp = AvgPool(stride)(prev_inp)
+                raise Exception('DEBUG Unknown')
         self.log.info('After proj shape: {}'.format(
             prev_inp.get_shape()))
         return prev_inp
@@ -199,6 +200,8 @@ class ResNetSBN(GraphBuilder):
                                         w=self.shortcut_w[ii],
                                         bn=self.shortcut_bn[ii],
                                         stride=s)
+                                    self.register_var(
+                                        'stage_{}/shortcut'.format(ii), prev_inp)
                             else:
                                 if ch_in != ch_out:
                                     with tf.variable_scope('shortcut'):
@@ -295,6 +298,8 @@ class ResNetSBN(GraphBuilder):
                             # Old version
                             # Relu after add
                             prev_inp = tf.nn.relu(prev_inp + h)
+                            self.register_var(
+                                'stage_{}/layer_{}/relu'.format(ii, jj), prev_inp)
                         else:
                             # New version
                             # Pure linear
