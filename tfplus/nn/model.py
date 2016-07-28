@@ -141,6 +141,7 @@ class Model(GraphBuilder, OptionBase):
         # print '3', self.name
         if folder is not None:
             save_vars = self.get_save_var_dict()
+            # print 'save var len', len(save_vars)
             if len(save_vars) > 0:
                 Saver(folder, var_dict=save_vars,
                       fname=self.name).restore(sess)
@@ -451,6 +452,7 @@ class ContainerModel(Model):
             # print '2', m.name
             m.restore_weights_from(sess, folder)
             pass
+        # print 'self'
         return super(ContainerModel, self).restore_weights_from(sess, folder)
 
     def restore_aux_from(self, sess, folder):

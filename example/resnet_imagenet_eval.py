@@ -1,5 +1,5 @@
 """
-Train a 50-layer ResNet on ImageNet.
+Run inference on a ResNet on ImageNet.
 Usage: python res_net_example.py --help
 """
 
@@ -12,13 +12,9 @@ import tfplus
 import tfplus.data.imagenet
 from tfplus.utils import BatchIterator, ConcurrentBatchIterator
 import time
-import resnet_imagenet_example
+import resnet_imagenet_model_wrapper
 
-tfplus.init('Eval a 50-layer ResNet on ImageNet')
-UID_PREFIX = 'resnet_imgnet_ex'
-DATASET = 'imagenet'
-MODEL_NAME = 'resnet_imagenet_example'
-NUM_CLS = 1000
+tfplus.init('Run inference on a ResNet on ImageNet')
 
 # Main options
 tfplus.cmd_args.add('id', 'str', None)
@@ -29,12 +25,14 @@ tfplus.cmd_args.add('localhost', 'str', 'http://localhost')
 tfplus.cmd_args.add('restore_model', 'str', None)
 tfplus.cmd_args.add('restore_logs', 'str', None)
 tfplus.cmd_args.add('prefetch', 'bool', False)
+tfplus.cmd_args.add('forever', 'bool', False)
+tfplus.cmd_args.add('batch_size', 'int', 64)
 
 opt = tfplus.cmd_args.make()
 
 # Initialize logging/saving folder.
 if opt['id'] is None:
-    uid = tfplus.nn.model.gen_id(UID_PREFIX)
+    uid = tfplus.nn.model.gen_id('resnet_imgnet_ex')
 else:
     uid = opt['id']
 logs_folder = os.path.join(opt['logs'], uid)
@@ -46,10 +44,10 @@ results_folder = os.path.join(opt['results'], uid)
 data = {}
 for split in ['valid']:
     data[split] = tfplus.data.create_from_main(
-        DATASET, split=split, mode=split)
+        'imagenet', split=split, mode=split)
 
 
-def get_iter(split, batch_size=128, cycle=True, max_queue_size=20,
+def get_iter(split, batch_size=128, cycle=False, max_queue_size=20,
              num_threads=20):
     batch_iter = BatchIterator(
         num=data[split].get_size(), progress_bar=False, shuffle=True,
@@ -62,20 +60,21 @@ def get_iter(split, batch_size=128, cycle=True, max_queue_size=20,
     else:
         return batch_iter
 
-# Keep running eval.
-while True:
+
+def run_once():
     # New graph every time.
     with tf.Graph().as_default():
         with tf.Session() as sess:
             tf.set_random_seed(1234)
 
             # Initialize model.
-            model = (tfplus.nn.model.create_from_main(MODEL_NAME)
-                     .set_gpu(opt['gpu'])
-                     .set_folder(results_folder)
-                     .restore_options_from(opt['restore_model'])
-                     .build_loss_eval()
-                     )
+            model = (
+                tfplus.nn.model.create_from_main('resnet_imagenet_wrapper')
+                .set_gpu(opt['gpu'])
+                .set_folder(results_folder)
+                .restore_options_from(opt['restore_model'])
+                .build_loss_eval()
+            )
             if opt['restore_model'] is None:
                 raise Exception('Need to specify restore path.')
             MAX_RETRY = 20
@@ -99,14 +98,17 @@ while True:
             # Initialize experiment.
             (
                 tfplus.experiment.create_from_main('train')
+
                 .set_session(sess)
                 .set_model(model)
                 .set_logs_folder(os.path.join(opt['logs'], uid))
                 .set_localhost(opt['localhost'])
                 .restore_logs(opt['restore_logs'])
+
                 .add_csv_output('Loss', ['valid'])
                 .add_csv_output('Top 1 Accuracy', ['valid'])
                 .add_csv_output('Top 5 Accuracy', ['valid'])
+
                 .add_runner(  # Full epoch evaluation on validation set.
                     tfplus.runner.create_from_main('average')
                     .set_name('valid')
@@ -117,10 +119,19 @@ while True:
                     .add_cmd_listener('Top 1 Accuracy', 'acc')
                     .add_csv_listener('Top 5 Accuracy', 'top5_acc', 'valid')
                     .add_cmd_listener('Top 5 Accuracy', 'top5_acc')
-                    .set_iter(get_iter('valid', batch_size=opt['batch_size'],
-                                       cycle=False))
+                    .set_iter(get_iter('valid', batch_size=opt['batch_size']))
                     .set_phase_train(False)
                     .set_num_batch(500000)   # Just something more than needed.
                     .set_interval(1))
             ).run()
-    time.sleep(1800)  # Sleep 30 minutes
+
+# Keep running eval.
+keep_run = True
+while keep_run:
+    if not opt['forever']:
+        keep_run = False
+
+    run_once()
+
+    if keep_run:
+        time.sleep(1800)  # Sleep 30 minutes

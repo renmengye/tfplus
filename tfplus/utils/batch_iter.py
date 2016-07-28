@@ -7,9 +7,11 @@ Usage:
         labels_batch = labels_all[idx]
         train(inp_batch, labels_batch)
 """
+from __future__ import division
 
 import numpy as np
 import progress_bar as pb
+import logger
 import threading
 
 
@@ -26,7 +28,7 @@ class IBatchIterator(object):
 
 class BatchIterator(IBatchIterator):
 
-    def __init__(self, num, batch_size=1, progress_bar=False, get_fn=None, cycle=False, shuffle=True, stagnant=False):
+    def __init__(self, num, batch_size=1, progress_bar=False, log_epoch=10, get_fn=None, cycle=False, shuffle=True, stagnant=False):
         """Construct a batch iterator.
 
         Args:
@@ -50,6 +52,9 @@ class BatchIterator(IBatchIterator):
         self._random = np.random.RandomState(2)
         self._shuffle_flag = shuffle
         self._stagnant = stagnant
+        self._log_epoch = log_epoch
+        self._log = logger.get()
+        self._epoch = 0
         if progress_bar:
             self._pb = pb.get(self._num_steps)
             pass
@@ -79,6 +84,18 @@ class BatchIterator(IBatchIterator):
     def reset(self):
         self._step = 0
 
+    def print_progress(self):
+        e = self._epoch
+        a = self._step * self._batch_size
+        b = self._num
+        p = a / b * 100
+        digit = int(np.ceil(np.log10(b)))
+        progress_str = '{:' + str(digit) + 'd}'
+        progress_str = (progress_str + '/' + progress_str).format(a, b)
+        self._log.info(
+            'Epoch {:3d} Progress {} ({:5.2f}%)'.format(e, progress_str, p))
+        pass
+
     def next(self):
         """Iterate next element."""
         self._mutex.acquire()
@@ -101,11 +118,21 @@ class BatchIterator(IBatchIterator):
             if self._pb is not None:
                 self._pb.increment()
 
+            # Epoch record.
+            if self._cycle:
+                if end > self._num:
+                    self._epoch += 1
+
             # Increment step.
             if not self._stagnant:
                 self._step += 1
+
+            # Print progress
+            if self._log_epoch > 0 and self._step % self._log_epoch == 0:
+                self.print_progress()
         finally:
             self._mutex.release()
+
 
         if not self._cycle:
             end = min(self._num, end)

@@ -208,7 +208,7 @@ class BasicRunner(SessionRunner):
         self.listeners.append(listener.get_factory().create(
             'csv', name=name, var_name=var_name, label=label))
         # if var_name not in self.outputs:
-            # self.outputs.append(var_name)
+        # self.outputs.append(var_name)
         return self
 
     def add_plot_listener(self, name, mapping):
@@ -335,10 +335,11 @@ class BasicRunner(SessionRunner):
 
     def run_step(self):
         inp = self.iter.next()
-        
+
         if len(self.outputs) > 0:
             results = self._run_step(inp)
-        
+        else:
+            results = {}
         # Add identity mappings to ease things up.
         for key in inp.iterkeys():
             if key not in results:
@@ -463,6 +464,8 @@ class AccumulateRunner(BasicRunner):
             _results = self._run_step(inp)
             for key in _results.iterkeys():
                 if _results[key] is not None:
+                    if key not in results:
+                        results[key] = []
                     results[key].append(_results[key])
                 pass
             pass

@@ -56,12 +56,12 @@ def load_new_model(sess, restore_path, nlayers, device='/cpu:0'):
     return resnet, inp_var, out_var
 
 
-def load_feat_model(sess, restore_path, nlayers, device='/cpu:0'):
-    from imagenet_feat_model import ResNetImageNetFeatModel
+def load_wrapper_model(sess, restore_path, nlayers, device='/cpu:0'):
+    from resnet_imagenet_model_wrapper import ResNetImageNetModelWrapper
     with tf.device(device):
         logger = tfplus.utils.logger.get()
         with logger.verbose_level(2):
-            resnet = ResNetImageNetFeatModel().set_all_options({
+            resnet = ResNetImageNetModelWrapper().set_all_options({
                 'inp_depth': 3,
                 'layers': get_layers(nlayers),
                 'strides': [1, 2, 2, 2],
@@ -69,15 +69,15 @@ def load_feat_model(sess, restore_path, nlayers, device='/cpu:0'):
                 'bottleneck': True,
                 'shortcut': 'projection',
                 'compatible': True,
-                'weight_decay': 1e-4,
+                'wd': 1e-4,
                 'subtract_mean': True,
                 'trainable': False
             })
-            inp_var = res_net.build_input()
-            out_var = res_net.build(inp_var)
-    saver = tf.train.Saver(res_net.get_save_var_dict())
+            inp_var = resnet.build_input()
+            out_var = resnet.build(inp_var)
+    saver = tf.train.Saver(resnet.res_net.get_save_var_dict())
     saver.restore(sess, restore_path)
-    return resnet, inp_var, out_var
+    return resnet.res_net, inp_var, out_var['y_out']
 
 
 def get_layers(nlayer):
@@ -382,62 +382,61 @@ def main():
             print_prob(sess.run(out_var, feed_dict=feed_dict)[0])
             print '-----------------------------------------------------------'
 
-    # output_feat = {}
-    # with tf.Graph().as_default():
-    #     with tf.Session() as sess:
-    #         model, inp_var, out_var = load_feat_model(
-    #             sess, weights_file, NLAYERS,
-    #             device=get_device_fn(DEVICE))
+    output_wrapper = {}
+    with tf.Graph().as_default():
+        with tf.Session() as sess:
+            model, inp_var, out_var = load_wrapper_model(
+                sess, weights_file, NLAYERS,
+                device=get_device_fn(DEVICE))
 
-    #         # Write graph.
-    #         if WRITE_GRAPH:
-    #             summary_writer = tf.train.SummaryWriter(
-    #                 GRAPH_DIR2, graph_def=sess.graph_def)
-    #             summary_writer.close()
+            # Write graph.
+            if WRITE_GRAPH:
+                summary_writer = tf.train.SummaryWriter(
+                    GRAPH_DIR2, graph_def=sess.graph_def)
+                summary_writer.close()
 
-    #         # Input is BGR.
-    #         feed_dict = {inp_var['x']: image_data[:, :, :, [2, 1, 0]],
-    #                      inp_var['phase_train']: False}
+            # Input is BGR.
+            feed_dict = {inp_var['x']: image_data[:, :, :, [2, 1, 0]],
+                         inp_var['phase_train']: False}
 
-    #         # Test output.
-    #         print '-----------------------------------------------------------'
-    #         print 'New model pass 1'
-    #         print_prob(sess.run(out_var, feed_dict=feed_dict)[0])
-    # print '-----------------------------------------------------------'
+            # Test output.
+            print '-----------------------------------------------------------'
+            print 'Wrapper model pass 1'
+            print_prob(sess.run(out_var, feed_dict=feed_dict)[0])
+            print '-----------------------------------------------------------'
 
-    #         # output_new['w1'] = sess.run(model.conv1.w)
-    #         output_new['w1'] = sess.run(model.w1)
-    #         output_new['bn1_beta'] = sess.run(model.bn1.beta)
-    #         output_new['bn1_gamma'] = sess.run(model.bn1.gamma)
-    #         output_new['bn1_mean'] = sess.run(
-    #             model.bn1.get_save_var_dict()['ema_mean'])
-    #         output_new['bn1_var'] = sess.run(
-    #             model.bn1.get_save_var_dict()['ema_var'])
+            output_wrapper['w1'] = sess.run(model.conv1.w)
+            output_wrapper['bn1_beta'] = sess.run(model.bn1.beta)
+            output_wrapper['bn1_gamma'] = sess.run(model.bn1.gamma)
+            output_wrapper['bn1_mean'] = sess.run(
+                model.bn1.get_save_var_dict()['ema_mean'])
+            output_wrapper['bn1_var'] = sess.run(
+                model.bn1.get_save_var_dict()['ema_var'])
 
-    #         # Test specific activation.
-    #         output_new['sub'] = sess.run(
-    #             model.get_var('x_sub'), feed_dict=feed_dict)
-    #         output_new['conv1'] = sess.run(
-    #             model.get_var('h_conv1'), feed_dict=feed_dict)
-    #         output_new['bn1'] = sess.run(
-    #             model.get_var('h_bn1'), feed_dict=feed_dict)
-    #         output_new['act2'] = sess.run(model.res_net.get_var(
-    #             'stage_0/layer_2/relu'), feed_dict=feed_dict)
-    #         output_new['shortcut3'] = sess.run(
-    #             model.res_net.get_var('stage_1/shortcut'), feed_dict=feed_dict)
-    #         for ll in xrange(8):
-    #             output_new['act3_{}'.format(ll)] = sess.run(
-    #                 model.res_net.get_var('stage_1/layer_{}/relu'.format(ll)),
-    #                 feed_dict=feed_dict)
-    #         output_new['act4'] = sess.run(model.res_net.get_var(
-    #             'stage_2/layer_35/relu'), feed_dict=feed_dict)
-    #         output_new['act5'] = sess.run(model.res_net.get_var(
-    #             'stage_3/layer_2/relu'), feed_dict=feed_dict)
+            # Test specific activation.
+            output_wrapper['sub'] = sess.run(
+                model.get_var('x_sub'), feed_dict=feed_dict)
+            output_wrapper['conv1'] = sess.run(
+                model.get_var('h_conv1'), feed_dict=feed_dict)
+            output_wrapper['bn1'] = sess.run(
+                model.get_var('h_bn1'), feed_dict=feed_dict)
+            output_wrapper['act2'] = sess.run(model.res_net.get_var(
+                'stage_0/layer_2/relu'), feed_dict=feed_dict)
+            output_wrapper['shortcut3'] = sess.run(
+                model.res_net.get_var('stage_1/shortcut'), feed_dict=feed_dict)
+            for ll in xrange(8):
+                output_wrapper['act3_{}'.format(ll)] = sess.run(
+                    model.res_net.get_var('stage_1/layer_{}/relu'.format(ll)),
+                    feed_dict=feed_dict)
+            output_wrapper['act4'] = sess.run(model.res_net.get_var(
+                'stage_2/layer_35/relu'), feed_dict=feed_dict)
+            output_wrapper['act5'] = sess.run(model.res_net.get_var(
+                'stage_3/layer_2/relu'), feed_dict=feed_dict)
 
-    #         print '-----------------------------------------------------------'
-    #         print 'New model pass 2'
-    #         print_prob(sess.run(out_var, feed_dict=feed_dict)[0])
-    # print '-----------------------------------------------------------'
+            print '-----------------------------------------------------------'
+            print 'Wrapper model pass 2'
+            print_prob(sess.run(out_var, feed_dict=feed_dict)[0])
+    print '-----------------------------------------------------------'
 
     # Check all intermediate values.
     print '-----------------------------------------------------------'
@@ -450,8 +449,15 @@ def main():
         print '{:15s}\t{:.8f}\t{:.8f}'.format(kk, diff, diff / denom)
     print '-----------------------------------------------------------'
 
-    print output_old['act5']
-    print output_old['act5'].shape
+    print '-----------------------------------------------------------'
+    print 'Summary 2'
+    print '{:15s}\t{:10s}\t{:10s}'.format('variable', 'diff', 'rel diff')
+    print '-----------------------------------------------------------'
+    for kk in sorted(output_old.keys()):
+        diff = np.abs(output_old[kk] - output_wrapper[kk]).mean()
+        denom = np.abs(output_old[kk]).mean()
+        print '{:15s}\t{:.8f}\t{:.8f}'.format(kk, diff, diff / denom)
+    print '-----------------------------------------------------------'
 
 if __name__ == '__main__':
     main()
