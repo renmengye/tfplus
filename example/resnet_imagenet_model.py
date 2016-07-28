@@ -42,7 +42,6 @@ class ResNetImageNetModel(tfplus.nn.Model):
         bottleneck = self.get_option('bottleneck')
         shortcut = self.get_option('shortcut')
         compatible = self.get_option('compatible')
-        print 'Compatible', compatible
         trainable = self.get_option('trainable')
         self.conv1 = Conv2DW(
             f=7, ch_in=inp_depth, ch_out=channels[0], stride=2, wd=wd,
@@ -86,14 +85,9 @@ class ResNetImageNetModel(tfplus.nn.Model):
             x = x * 2.0 - 1.0       # center at [-1, 1].
         self.register_var('x_sub', x)
 
-        self.w1 = tf.Variable(tf.constant_initializer(0.0)([7, 7, 3, 64]))
-        h = tf.nn.conv2d(x, self.w1, [1, 2, 2, 1], padding='SAME')
-
-        # h = self.conv1(x)
-
+        h = self.conv1(x)
         self.register_var('h_conv1', h)
-        trainable = self.get_option('trainable')
-        
+      
         h = self.bn1({'input': h, 'phase_train': phase_train})
         self.register_var('h_bn1', h)
         h = tf.nn.relu(h)
@@ -109,9 +103,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
         results = {}
         if self.has_var('step'):
             results['step'] = self.get_var('step')
-        # self.add_prefix_to('conv1', self.conv1.get_save_var_dict(), results)
-        results['conv1/w'] = self.w1
-
+        self.add_prefix_to('conv1', self.conv1.get_save_var_dict(), results)
         self.add_prefix_to('bn1', self.bn1.get_save_var_dict(), results)
         self.add_prefix_to(
             'res_net', self.res_net.get_save_var_dict(), results)

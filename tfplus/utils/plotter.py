@@ -157,6 +157,7 @@ class ThumbnailPlotter(Plotter):
             images: [B, H, W] or [B, H, W, 3]
         """
         img = results['images']
+        print self.name, img.min(), img.max()
         self.plot(img)
         self.register()
     pass

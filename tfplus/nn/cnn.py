@@ -178,11 +178,8 @@ class CNN(GraphBuilder):
             results[prefix + 'b'] = self.b[ii]
             bn = self.batch_norm[ii]
             if bn is not None:
-                results[prefix + 'bn/beta'] = bn.beta
-                results[prefix + 'bn/gamma'] = bn.gamma
-                ema_mean, ema_var = bn.get_shadow_ema()
-                results[prefix + 'bn/ema_mean'] = ema_mean
-                results[prefix + 'bn/ema_var'] = ema_var
+                self.add_prefix_to(
+                    prefix + 'bn', bn.get_save_var_dict(), results)
             pass
         return results
     pass

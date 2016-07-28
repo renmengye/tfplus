@@ -133,8 +133,11 @@ class SaverRunner(SessionRunner):
         return self.set_option('save_ckpt', value)
 
     def run_step(self):
-        step = self.get_session().run(self.model.get_var('step'))
-        step = int(step)
+        if self.model.has_var('step'):
+            step = self.get_session().run(self.model.get_var('step'))
+            step = int(step)
+        else:
+            step = 0
         if self.get_option('save_ckpt'):
             self._log.info('Saving checkpoint')
             self.model.save(self.get_session(), step=step)
@@ -162,8 +165,9 @@ class RestorerRunner(SessionRunner):
         return self
 
     def run_step(self):
-        step = self.get_session().run(self.model.get_var('step'))
-        step = int(step)
+        if self.model.has_var('step'):
+            step = self.get_session().run(self.model.get_var('step'))
+            step = int(step)
         self._log.info('Restoring checkpoint')
         self.model = None
         self.model.restore_weights_from(self.get_session(), self.folder)
@@ -178,7 +182,6 @@ class BasicRunner(SessionRunner):
     def __init__(self):
         super(BasicRunner, self).__init__()
         self._step = 0
-        # self._iter = None
         self._data_provider = None
         self._phase_train = True
         self._outputs = []
@@ -202,38 +205,29 @@ class BasicRunner(SessionRunner):
         return self
 
     def add_csv_listener(self, name, var_name, label=None):
-        if var_name not in self.outputs and var_name != 'step_time':
-            raise Exception(
-                'Runner "{}": variable "{}" is not in output list.'.format(
-                    self.name, var_name))
         self.listeners.append(listener.get_factory().create(
             'csv', name=name, var_name=var_name, label=label))
+        # if var_name not in self.outputs:
+            # self.outputs.append(var_name)
         return self
 
     def add_plot_listener(self, name, mapping):
-        for var_name in mapping.iterkeys():
-            if var_name not in self.outputs and var_name != 'step_time':
-                raise Exception(
-                    'Runner "{}": variable "{}" is not in output list.'.format(
-                        self.name, var_name))
         self.listeners.append(listener.AdapterListener(
             mapping=mapping,
             listener=plotter.get(name)))
+        # for var_name in mapping.iterkeys():
+        #     if var_name not in self.outputs:
+        #         self.outputs.append(var_name)
         return self
 
     def add_cmd_listener(self, name, var_name):
-        if var_name not in self.outputs and var_name != 'step_time':
-            raise Exception(
-                'Runner "{}": variable "{}" is not in output list.'.format(
-                    self.name, var_name))
         self.listeners.append(listener.get_factory().create(
             'cmd', name=name, var_name=var_name))
+        # if var_name not in self.outputs:
+        #     self.outputs.append(var_name)
         return self
 
     def finalize(self):
-        # for key, value in self.loggers.items():
-        #     value.close()
-        #     pass
         pass
 
     @property
@@ -243,7 +237,6 @@ class BasicRunner(SessionRunner):
     @property
     def phase_train(self):
         return self._phase_train
-    pass
 
     def get_phase_train(self):
         return self._phase_train
@@ -263,17 +256,6 @@ class BasicRunner(SessionRunner):
         self._iter = value
         return self
 
-    # @property
-    # def data_provider(self):
-    #     return self._data_provider
-
-    # def get_data_provider(self):
-    #     return self._data_provider
-
-    # def set_data_provider(self, value):
-    #     self._data_provider = value
-    #     return self
-
     @property
     def outputs(self):
         return self._outputs
@@ -283,8 +265,10 @@ class BasicRunner(SessionRunner):
 
     def set_outputs(self, value):
         self._outputs = value
-        if 'step' not in self._outputs:
-            self._outputs.append('step')
+        return self
+
+    def add_output(self, var_name):
+        self._outputs.append(var_name)
         return self
 
     @property
@@ -313,50 +297,53 @@ class BasicRunner(SessionRunner):
         start_time = time.time()
         r = self.run_model(inp)
         step_time = (time.time() - start_time) * 1000
-        r['step_time'] = step_time
-        self._step = int(r['step'])
+        if 'step_time' in self.outputs:
+            r['step_time'] = step_time
+        if 'step' in r:
+            self._step = int(r['step'])
         return r
 
     def get_feed_dict(self, inp):
         inp = self._preprocessor(inp)
-        feed_dict = {self.model.get_input_var('phase_train'): self.phase_train}
-        # set_var = False
+        feed_dict = {}
+        if self.model.has_var('phase_train'):
+            feed_dict[self.model.get_input_var(
+                'phase_train')] = self.phase_train
+
         for key in inp.iterkeys():
             if self.model.has_input_var(key):
                 feed_dict[self.model.get_input_var(key)] = inp[key]
                 pass
-            # else:
-            #     self.log.warning(
-            #         'Ignoring input variable "{}".'.format(key))
-            #     set_var = True
-            #     pass
-        # if set_var:
-        #     # Set a subset of variables.
-        #     if self.data_provider.variables is None:
-        #         self.data_provider.set_variables(
-        #             self.model.get_all_input_vars().keys())
-        #         self.log.warning('Setting input variable list: {}'.format(
-        #             self.data_provider.variables))
-        #         pass
-        #     pass
         return feed_dict
 
     def run_model(self, inp):
         feed_dict = self.get_feed_dict(inp)
-        symbol_list = [self.model.get_var(r) for r in self.outputs]
+        symbol_list = []
+        output_list = []
+        for r in self.outputs:
+            if r != 'step_time':
+                symbol_list.append(self.model.get_var(r))
+                output_list.append(r)
+        if self.model.has_var('step'):
+            symbol_list.append(self.model.get_var('step'))
+            output_list.append('step')
         results = self.session.run(symbol_list, feed_dict=feed_dict)
         results_dict = {}
-        for rr, name in zip(results, self.outputs):
+        for rr, name in zip(results, output_list):
             results_dict[name] = rr
         return results_dict
 
     def run_step(self):
-        try:
-            # inp = self.data_provider.get_batch()
-            inp = self.iter.next()
-        except StopIteration:
-            return False
-        results = self._run_step(inp)
+        inp = self.iter.next()
+        
+        if len(self.outputs) > 0:
+            results = self._run_step(inp)
+        
+        # Add identity mappings to ease things up.
+        for key in inp.iterkeys():
+            if key not in results:
+                results[key] = inp[key]
+
         self.write_log(results)
         return True
 
@@ -394,7 +381,6 @@ class AverageRunner(BasicRunner):
         for key in self.outputs:
             results[key] = 0.0
             pass
-        results['step_time'] = 0.0
 
         stop_flag = False
 
@@ -411,6 +397,8 @@ class AverageRunner(BasicRunner):
             bat_sz_total += bat_sz
             for key in _results.iterkeys():
                 if _results[key] is not None:
+                    if key not in results:
+                        results[key] = 0.0
                     results[key] += _results[key] * bat_sz
                 pass
             pass
@@ -429,3 +417,69 @@ class AverageRunner(BasicRunner):
         pass
 
 get_factory().register('average', AverageRunner)
+
+
+class AccumulateRunner(BasicRunner):
+
+    def __init__(self):
+        super(AccumulateRunner, self).__init__()
+        self._num_batch = 1
+        pass
+
+    @property
+    def num_batch(self):
+        return self._num_batch
+
+    def get_num_batch(self):
+        return self._num_batch
+
+    def set_num_batch(self, value):
+        self._num_batch = value
+        return self
+
+    def run_step(self):
+        bat_sz_total = 0
+        results = {}
+
+        # Initialize values.
+        if len(self.outputs) == 0:
+            self.log.warning(
+                'Empty outputs list for runner "{}"'.format(self.name))
+        for key in self.outputs:
+            results[key] = []
+            pass
+        results['step_time'] = []
+
+        stop_flag = False
+
+        # Run each batch.
+        for bb in xrange(self.num_batch):
+            try:
+                # inp = self.data_provider.get_batch()
+                inp = self.iter.next()
+            except StopIteration:
+                stop_flag = True
+                break
+            _results = self._run_step(inp)
+            for key in _results.iterkeys():
+                if _results[key] is not None:
+                    results[key].append(_results[key])
+                pass
+            pass
+
+        # Concatenate all batches.
+        for key in results.iterkeys():
+            results[key] = np.array(results[key])
+            print key, results[key].shape
+            pass
+
+        # Do not average steps.
+        results['step'] = self.step
+        self.write_log(results)
+
+        if stop_flag:
+            raise StopIteration
+        pass
+    pass
+
+get_factory().register('accumulate', AccumulateRunner)

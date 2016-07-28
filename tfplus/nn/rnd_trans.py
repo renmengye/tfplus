@@ -75,7 +75,7 @@ class ImageRandomTransform(GraphBuilder):
                 x_rand = tf.pad(
                     x, [[0, 0], [padding, padding], [padding, padding],
                         [0, 0]])
-                x_ctr = tf.slice(x_pad, [0, padding, padding, 0],
+                x_ctr = tf.slice(x_rand, [0, padding, padding, 0],
                                  tf.pack([-1, inp_height, inp_width, -1]))
             else:
                 x_ctr = x
@@ -83,7 +83,7 @@ class ImageRandomTransform(GraphBuilder):
 
             if self.padding != 0 or self.shrink != 0:
                 # Random crop
-                x_rand = tf.slice(x_pad, tf.pack([0, offset[0], offset[1], 0]),
+                x_rand = tf.slice(x_rand, tf.pack([0, offset[0], offset[1], 0]),
                                   tf.pack([-1, inp_height + offset2[0],
                                            inp_width + offset2[1], -1]))
                 if self.rnd_size:
@@ -107,14 +107,14 @@ class ImageRandomTransform(GraphBuilder):
                 x_rand = tf.pad(
                     x, [[0, 0], [0, 0], [padding, padding],
                         [padding, padding]])
-                x_ctr = tf.slice(x_pad, [0, 0, padding, padding],
+                x_ctr = tf.slice(x_rand, [0, 0, padding, padding],
                                  tf.pack([-1, -1, inp_height, inp_width]))
             else:
                 x_ctr = x
                 x_rand = x
 
             if self.padding != 0 or self.shrink != 0:
-                x_rand = tf.slice(x_pad, tf.pack([0, 0, offset[0], offset[1]]),
+                x_rand = tf.slice(x_rand, tf.pack([0, 0, offset[0], offset[1]]),
                                   tf.pack([-1, -1, inp_height + offset2[0],
                                            inp_width + offset2[1]]))
                 if self.rnd_size:

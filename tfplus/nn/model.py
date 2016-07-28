@@ -146,6 +146,13 @@ class Model(GraphBuilder, OptionBase):
                       fname=self.name).restore(sess)
         return self
 
+    def restore_weights_from_ckpt(self, sess, file):
+        if file is not None:
+            save_vars = self.get_save_var_dict()
+            if len(save_vars) > 0:
+                tf.train.Saver(self.get_save_var_dict()).restore(sess, file)
+        return self
+
     def restore_aux_from(self, sess, folder):
         """Restore the aux weights.
         WARNING: Call only after built the graph.
@@ -168,9 +175,10 @@ class Model(GraphBuilder, OptionBase):
             raise Exception('Has not set save folder yet')
         if self._saver is None:
             save_vars = self.get_save_var_dict()
-            self._saver = Saver(self.folder,
-                                var_dict=save_vars,
-                                fname=self.name)
+            if len(save_vars) > 0:
+                self._saver = Saver(self.folder,
+                                    var_dict=save_vars,
+                                    fname=self.name)
         return self._saver
 
     @property
@@ -308,16 +316,16 @@ class Model(GraphBuilder, OptionBase):
             self.register_var('step', self._global_step)
         return self._global_step
 
-    # def build_eval(self):
-    #     """Build nodes for evaluation/inference."""
-    #     if self._has_built_all:
-    #         raise Exception('Only call build_all or build_eval once.')
-    #     self._has_built_all = True
-    #     with tf.device(self.get_device_fn()):
-    #         with tf.variable_scope(self.name):
-    #             inp_var = self.build_input()
-    #             output_var = self.build(inp_var)
-    #     return self
+    def build_eval(self):
+        """Build nodes for evaluation/inference."""
+        if self._has_built_all:
+            raise Exception('Only call build_all or build_eval once.')
+        self._has_built_all = True
+        with tf.device(self.get_device_fn()):
+            with tf.variable_scope(self.name):
+                inp_var = self.build_input()
+                output_var = self.build(inp_var)
+        return self
 
     def build_loss_eval(self):
         """Build nodes for evaluation/inference."""

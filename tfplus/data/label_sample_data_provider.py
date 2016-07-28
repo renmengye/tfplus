@@ -26,9 +26,13 @@ class LabelSampleDataProvider(DataProvider):
         return self._data_provider
 
     def get_size(self):
-        # Only iterating the keys (equalize the weights between different
-        # classes)
-        return len(self.data_provider.label_idx.keys())
+        if self.mode == 'train':
+            # Only iterating the keys (equalize the weights between different
+            # classes).
+            return len(self.data_provider.label_idx.keys())
+        else:
+            # Iterating the whole dataset.
+            return self.data_provider.get_size()
 
     def get_batch_idx(self, idx, **kwargs):
         if self.mode == 'train':
