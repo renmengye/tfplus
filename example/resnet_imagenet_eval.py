@@ -112,7 +112,9 @@ def run_once():
                 .add_runner(  # Full epoch evaluation on validation set.
                     tfplus.runner.create_from_main('average')
                     .set_name('valid')
-                    .set_outputs(['loss', 'acc', 'top5_acc'])
+                    .add_output('loss')
+                    .add_output('acc')
+                    .add_output('top5_acc')
                     .add_csv_listener('Loss', 'loss', 'valid')
                     .add_cmd_listener('Loss', 'loss')
                     .add_csv_listener('Top 1 Accuracy', 'acc', 'valid')
