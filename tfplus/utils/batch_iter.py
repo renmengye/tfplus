@@ -86,7 +86,7 @@ class BatchIterator(IBatchIterator):
 
     def print_progress(self):
         e = self._epoch
-        a = self._step * self._batch_size
+        a = (self._step * self._batch_size) % self._num
         b = self._num
         p = a / b * 100
         digit = int(np.ceil(np.log10(b)))
@@ -120,7 +120,7 @@ class BatchIterator(IBatchIterator):
 
             # Epoch record.
             if self._cycle:
-                if end > self._num:
+                if int(end / self._num) > int(start / self._num):
                     self._epoch += 1
 
             # Increment step.
