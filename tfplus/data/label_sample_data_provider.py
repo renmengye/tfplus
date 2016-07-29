@@ -45,5 +45,6 @@ class LabelSampleDataProvider(DataProvider):
                 new_idx.append(data_group[kk])
             # self.log.info('Ex IDX: {}'.format(new_idx))
         else:
+            # self.log.info('Eval mode idx: {}'.format(idx))
             new_idx = idx
         return self.data_provider.get_batch_idx(new_idx)
