@@ -322,10 +322,9 @@ class Model(GraphBuilder, OptionBase):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
-        with tf.device(self.get_device_fn()):
-            with tf.variable_scope(self.name):
-                inp_var = self.build_input()
-                output_var = self.build(inp_var)
+        with tf.variable_scope(self.name):
+            inp_var = self.build_input()
+            output_var = self.build(inp_var)
         return self
 
     def build_loss_eval(self):
@@ -333,12 +332,11 @@ class Model(GraphBuilder, OptionBase):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
-        with tf.device(self.get_device_fn()):
-            with tf.variable_scope(self.name):
-                inp_var = self.build_input()
-                output_var = self.build(inp_var)
-                gs = self.global_step
-                loss_var = self.build_loss(inp_var, output_var)
+        with tf.variable_scope(self.name):
+            inp_var = self.build_input()
+            output_var = self.build(inp_var)
+            gs = self.global_step
+            loss_var = self.build_loss(inp_var, output_var)
         return self
 
     def build_all(self):
@@ -346,13 +344,12 @@ class Model(GraphBuilder, OptionBase):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
-        with tf.device(self.get_device_fn()):
-            with tf.variable_scope(self.name):
-                inp_var = self.build_input()
-                output_var = self.build(inp_var)
-                loss_var = self.build_loss(inp_var, output_var)
-                train_step = self.build_optim(loss_var)
-                self.register_var('train_step', train_step)
+        with tf.variable_scope(self.name):
+            inp_var = self.build_input()
+            output_var = self.build(inp_var)
+            loss_var = self.build_loss(inp_var, output_var)
+            train_step = self.build_optim(loss_var)
+            self.register_var('train_step', train_step)
         return self
 
     def init(self, sess):
