@@ -323,6 +323,7 @@ class Model(GraphBuilder, OptionBase):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
+        # with tf.device(self.get_device_fn()):
         with tf.variable_scope(self.name):
             inp_var = self.build_input()
             output_var = self.build(inp_var)
@@ -333,6 +334,7 @@ class Model(GraphBuilder, OptionBase):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
+        # with tf.device(self.get_device_fn()):
         with tf.variable_scope(self.name):
             inp_var = self.build_input()
             output_var = self.build(inp_var)
@@ -345,6 +347,7 @@ class Model(GraphBuilder, OptionBase):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
+        # with tf.device(self.get_device_fn()):
         with tf.variable_scope(self.name):
             inp_var = self.build_input()
             output_var = self.build(inp_var)

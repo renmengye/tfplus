@@ -10,6 +10,7 @@ class LabelSampleDataProvider(DataProvider):
         self._data_provider = data_provider
         self._rnd = np.random.RandomState(2)
         self._mode = mode
+        self._real_size = len(self.data_provider.label_idx.keys())
         self.log = tfplus.utils.logger.get()
         pass
 
@@ -29,7 +30,7 @@ class LabelSampleDataProvider(DataProvider):
         if self.mode == 'train':
             # Only iterating the keys (equalize the weights between different
             # classes).
-            return len(self.data_provider.label_idx.keys())
+            return self._real_size * 10000
         else:
             # Iterating the whole dataset.
             return self.data_provider.get_size()
@@ -39,7 +40,8 @@ class LabelSampleDataProvider(DataProvider):
             new_idx = []
             # self.log.info('Label IDX: {}'.format(idx))
             for ii in idx:
-                data_group = self.data_provider.label_idx[ii]
+                ii_ = ii % self._real_size
+                data_group = self.data_provider.label_idx[ii_]
                 num_ids = len(data_group)
                 kk = int(np.floor(self.rnd.uniform(0, num_ids)))
                 new_idx.append(data_group[kk])

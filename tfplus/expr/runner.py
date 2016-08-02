@@ -333,7 +333,9 @@ class BasicRunner(SessionRunner):
         if self.model.has_var('step'):
             symbol_list.append(self.model.get_var('step'))
             output_list.append('step')
+        print 'Session run start'
         results = self.session.run(symbol_list, feed_dict=feed_dict)
+        print 'Session run end'
         results_dict = {}
         for rr, name in zip(results, output_list):
             results_dict[name] = rr

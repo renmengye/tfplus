@@ -116,26 +116,27 @@ class Logger(object):
             environment variable, then the message will be logged to standard 
             output and log output file (if set).
         """
+        threadstr = '{}'.format(threading.current_thread().ident)[-4:]
         if typ == 'info':
-            typstr_print = '{0}INFO:{1}'.format(
-                TERM_COLOR['green'], TERM_COLOR['default'])
-            typstr_log = 'INFO:'
+            typstr_print = '{}I{}:{}'.format(
+                TERM_COLOR['green'], threadstr, TERM_COLOR['default'])
+            typstr_log = 'I{}:'.format(threadstr)
         elif typ == 'warning':
-            typstr_print = '{0}WARNING:{1}'.format(
-                TERM_COLOR['yellow'], TERM_COLOR['default'])
-            typstr_log = 'WARNING:'
+            typstr_print = '{}W{}:{}'.format(
+                TERM_COLOR['yellow'], threadstr, TERM_COLOR['default'])
+            typstr_log = 'W{}:'.format(threadstr)
         elif typ == 'debug':
-            typstr_print = '{0}DEBUG:{1}'.format(
-                TERM_COLOR['yellow'], TERM_COLOR['default'])
-            typstr_log = 'DEBUG:'
+            typstr_print = '{}D{}:{}'.format(
+                TERM_COLOR['yellow'], threadstr, TERM_COLOR['default'])
+            typstr_log = 'D{}:'.format(threadstr)
         elif typ == 'error':
-            typstr_print = '{0}ERROR:{1}'.format(
-                TERM_COLOR['red'], TERM_COLOR['default'])
-            typstr_log = 'ERROR:'
+            typstr_print = '{}E:{}'.format(
+                TERM_COLOR['red'], threadstr, TERM_COLOR['default'])
+            typstr_log = 'E{}:'.format(threadstr)
         elif typ == 'fatal':
-            typstr_print = '{0}FATAL:{1}'.format(
-                TERM_COLOR['red'], TERM_COLOR['default'])
-            typstr_log = 'FATAL:'
+            typstr_print = '{}F:{}'.format(
+                TERM_COLOR['red'], threadstr, TERM_COLOR['default'])
+            typstr_log = 'F{}:'.format(threadstr)
         else:
             raise Exception('Unknown log type: {0}'.format(typ))
         timestr = self.get_time_str()
@@ -148,10 +149,11 @@ class Logger(object):
         if filename.startswith(cwd):
             filename = filename[len(cwd):]
         filename = filename.lstrip('/')
-        callerstr = '{0}:{1}'.format(filename, line_number)
-        printstr = '{0} {1} {2} {3}'.format(
+
+        callerstr = '{}:{}'.format(filename, line_number)
+        printstr = '{} {} {} {}'.format(
             typstr_print, timestr, callerstr, message)
-        logstr = '{0} {1} {2} {3}'.format(
+        logstr = '{} {} {} {}'.format(
             typstr_log, timestr, callerstr, message)
 
         if verbose is None:
@@ -162,6 +164,7 @@ class Logger(object):
         # print((self.verbose_thresh, type(self.verbose_thresh), verbose, type(verbose)))
 
 
+        # print(threadstr, 'Waiting log lock')
         log_lock.acquire()
         if self.verbose_thresh >= verbose:
             print(printstr)
@@ -171,6 +174,7 @@ class Logger(object):
                 f.write(logstr)
                 f.write('\n')
         log_lock.release()
+        # print(threadstr, 'Released log lock')
         pass
 
     def info(self, message, verbose=None):

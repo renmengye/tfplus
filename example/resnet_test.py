@@ -15,11 +15,11 @@ import tfplus
 
 
 def checkpoint_fn(layers):
-    return '/u/mren/third_party/tensorflow-resnet/ResNet-L%d.ckpt' % layers
+    return 'ResNet-L%d.ckpt' % layers
 
 
 def meta_fn(layers):
-    return '/u/mren/third_party/tensorflow-resnet/ResNet-L%d.meta' % layers
+    return 'ResNet-L%d.meta' % layers
 
 
 def load_old_model(sess, nlayers, device='/cpu:0'):
@@ -243,12 +243,13 @@ def get_device_fn(device):
 def main():
     NLAYERS = 152
     SAVE_FOLDER = '/ais/gobi4/mren/data'
+    # SAVE_FOLDER = '/dev/shm/models/res152'
     WRITE_GRAPH = False
     GRAPH_DIR1 = '/u/mren/logs'
     GRAPH_DIR2 = '/u/mren/logs2'
     # DEVICE = '/gpu:0'
     DEVICE = '/cpu:0'
-    image_file = '/u/mren/third_party/tensorflow-resnet/data/cat.jpg'
+    image_file = 'cat.jpg'
     image_data = load_image(image_file).reshape([1, 224, 224, 3])
 
     weights_file = os.path.join(SAVE_FOLDER, 'res_{}.ckpt'.format(NLAYERS))
