@@ -120,7 +120,7 @@ class ConvLSTM(GraphBuilder):
             h = g_o * tf.tanh(c)
             state = tf.concat(3, [c, h])
 
-        return {'state': state}
+        return state
 
     def get_save_var_dict(self):
         results = {}

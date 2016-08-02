@@ -8,8 +8,7 @@ from batch_norm import BatchNorm
 
 class DCNN(GraphBuilder):
 
-    def __init__(self, f, ch, pool, act, use_bn, skip_ch=None, wd=None, scope='dcnn',
-                 init_weights=None, frozen=None):
+    def __init__(self, f, ch, pool, act, use_bn, skip_ch=None, wd=None, scope='dcnn', trainable=True):
         self.filter_size = f
         self.channels = ch
         self.pool = pool
@@ -17,14 +16,13 @@ class DCNN(GraphBuilder):
         self.use_bn = use_bn
         self.wd = wd
         self.scope = scope
-        self.init_weights = init_weights
-        self.frozen = frozen
+        self.trainable = trainable
         self.skip_ch = skip_ch
 
         self.nlayers = len(f)
         self.w = [None] * self.nlayers
         self.b = [None] * self.nlayers
-        self.batch_norm = [None] * self.nlayers
+        self.batch_norm = []
         self.num_copies = 0
 
         super(DCNN, self).__init__()
@@ -41,6 +39,8 @@ class DCNN(GraphBuilder):
         f = self.filter_size
         ch = self.channels
         wd = self.wd
+        self.batch_norm.append([None] * self.nlayers)
+        trainable = self.trainable
         with tf.variable_scope(self.scope):
             in_ch = ch[0]
             for ii in xrange(self.nlayers):
@@ -49,29 +49,13 @@ class DCNN(GraphBuilder):
                     if self.skip_ch is not None:
                         if self.skip_ch[ii] is not None:
                             in_ch += self.skip_ch[ii]
-
-                    if self.init_weights is not None and self.init_weights[ii] is not None:
-                        init_val_w = self.init_weights[ii]['w']
-                        init_val_b = self.init_weights[ii]['b']
-                    else:
-                        init_val_w = None
-                        init_val_b = None
-
-                    if self.frozen is not None and self.frozen[ii]:
-                        trainable = False
-                    else:
-                        trainable = True
-
                     self.w[ii] = self.declare_var([f[ii], f[ii], out_ch, in_ch],
-                                                  name='w',
-                                                  init_val=init_val_w, wd=wd,
+                                                  name='w', wd=wd,
                                                   trainable=trainable)
-                    self.b[ii] = self.declare_var([out_ch], init_val=init_val_b,
-                                                  name='b',
+                    self.b[ii] = self.declare_var([out_ch],  name='b',
                                                   trainable=trainable)
                     self.log.info('Filter: {}, Trainable: {}'.format(
                         [f[ii], f[ii], out_ch, in_ch], trainable))
-
                     in_ch = out_ch
                     pass
                 pass
@@ -116,26 +100,9 @@ class DCNN(GraphBuilder):
                         strides=[1, self.pool[ii], self.pool[ii], 1]) + self.b[ii]
 
                     if self.use_bn[ii]:
-                        if self.frozen is not None and self.frozen[ii]:
-                            bn_frozen = True
-                        else:
-                            bn_frozen = False
-
-                        if self.init_weights is not None and \
-                                self.init_weights[ii] is not None:
-                            init_beta = self.init_weights[ii][
-                                'beta_{}'.format(copy[0])]
-                            init_gamma = self.init_weights[ii][
-                                'gamma_{}'.format(copy[0])]
-                        else:
-                            init_beta = None
-                            init_gamma = None
-
-                        self.batch_norm[ii] = BatchNorm(out_ch,
-                                                        init_beta=init_beta,
-                                                        init_gamma=init_gamma)
-
-                        h[ii] = self.batch_norm[ii](
+                        self.batch_norm[self.num_copies][
+                            ii] = BatchNorm(out_ch)
+                        h[ii] = self.batch_norm[self.num_copies][ii](
                             {'input': h[ii], 'phase_train': phase_train})
 
                     if self.act[ii] is not None:
@@ -151,10 +118,16 @@ class DCNN(GraphBuilder):
             prefix = 'layer_{}/'.format(ii)
             results[prefix + 'w'] = self.w[ii]
             results[prefix + 'b'] = self.b[ii]
-            bn = self.batch_norm[ii]
-            if bn is not None:
-                self.add_prefix_to(
-                    prefix + 'bn', bn.get_save_var_dict(), results)
-            pass
+        for cc in xrange(self.num_copies):
+            for ii in xrange(self.nlayers):
+                prefix = 'layer_{}/'.format(ii)
+                if len(self.batch_norm) == 1:
+                    bn_name = 'bn'
+                else:
+                    bn_name = 'bn_{}'.format(cc)
+                bn = self.batch_norm[cc][ii]
+                if bn is not None:
+                    self.add_prefix_to(
+                        prefix + bn_name, bn.get_save_var_dict(), results)
         return results
     pass

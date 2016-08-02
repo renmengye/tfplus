@@ -73,7 +73,6 @@ def get_data(split, batch_size=128, cycle=True, max_queue_size=10,
         batch_iter = ConcurrentBatchIterator(
             batch_iter, max_queue_size=max_queue_size,
             num_threads=num_threads)
-
     return batch_iter
 
 # Initialize experiment.

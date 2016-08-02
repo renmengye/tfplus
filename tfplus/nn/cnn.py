@@ -12,8 +12,7 @@ from batch_norm import BatchNorm
 class CNN(GraphBuilder):
 
     def __init__(self, f, ch, pool, act, use_bn, wd=None, use_stride=False,
-                 scope='cnn', init_weights=None, frozen=None,
-                 shared_weights=None, initialization='msra'):
+                 scope='cnn', trainable=True, initialization='msra'):
         """Add CNN. N = number of layers.
 
         Args:
@@ -31,14 +30,12 @@ class CNN(GraphBuilder):
         self.use_bn = use_bn
         self.wd = wd
         self.scope = scope
-        self.init_weights = init_weights
-        self.frozen = frozen
-        self.shared_weights = shared_weights
+        self.trainable = trainable
 
         self.nlayers = len(f)
         self.w = [None] * self.nlayers
         self.b = [None] * self.nlayers
-        self.batch_norm = [None] * self.nlayers
+        self.batch_norm = []
         self.num_copies = 0
         if initialization == 'msra':
             self.compute_std = lambda s: np.sqrt(2 / s[0] * s[1] * s[3])
@@ -52,7 +49,6 @@ class CNN(GraphBuilder):
         self.log.info('Activation: {}'.format(act))
         self.log.info('Pool: {}'.format(pool))
         self.log.info('BN: {}'.format(use_bn))
-        self.log.info('Shared weights: {}'.format(shared_weights))
         pass
 
     def init_var(self):
@@ -60,46 +56,22 @@ class CNN(GraphBuilder):
         f = self.filter_size
         ch = self.channels
         wd = self.wd
+        trainable = self.trainable
         with tf.variable_scope(self.scope):
             for ii in xrange(self.nlayers):
                 with tf.variable_scope('layer_{}'.format(ii)):
-                    if self.init_weights:
-                        init = tf.constant_initializer
-                    else:
-                        init = None
-
-                    if self.init_weights is not None and \
-                            self.init_weights[ii] is not None:
-                        init_val_w = init_weights[ii]['w']
-                        init_val_b = init_weights[ii]['b']
-                    else:
-                        init_val_w = None
-                        init_val_b = None
-
-                    if self.frozen is not None and self.frozen[ii]:
-                        trainable = False
-                    else:
-                        trainable = True
-
-                    if self.shared_weights:
-                        self.w[ii] = self.shared_weights[ii]['w']
-                        self.b[ii] = self.shared_weights[ii]['b']
-                    else:
-                        self.w[ii] = self.declare_var(
-                            [f[ii], f[ii], ch[ii], ch[ii + 1]],
-                            name='w',
-                            init_val=init_val_w, wd=wd,
-                            trainable=trainable,
-                            stddev=self.compute_std(
-                                [f[ii], f[ii], ch[ii], ch[ii + 1]])
-                        )
-                        self.b[ii] = self.declare_var(
-                            [ch[ii + 1]], init_val=init_val_b,
-                            name='b',
-                            trainable=trainable,
-                            stddev=0
-                        )
-
+                    self.w[ii] = self.declare_var(
+                        [f[ii], f[ii], ch[ii], ch[ii + 1]],
+                        name='w', wd=wd,
+                        trainable=trainable,
+                        stddev=self.compute_std(
+                            [f[ii], f[ii], ch[ii], ch[ii + 1]])
+                    )
+                    self.b[ii] = self.declare_var(
+                        [ch[ii + 1]], name='b',
+                        trainable=trainable,
+                        stddev=0
+                    )
                     self.log.info('Filter: {}, Trainable: {}'.format(
                         [f[ii], f[ii], ch[ii], ch[ii + 1]], trainable))
                     pass
@@ -121,8 +93,8 @@ class CNN(GraphBuilder):
         self.lazy_init_var()
         x = inp['input']
         phase_train = inp['phase_train']
-
         h = [None] * self.nlayers
+        self.batch_norm.append([None] * self.nlayers)
         with tf.variable_scope(self.scope):
             for ii in xrange(self.nlayers):
                 with tf.variable_scope('layer_{}'.format(ii)):
@@ -133,29 +105,12 @@ class CNN(GraphBuilder):
                     else:
                         prev_inp = h[ii - 1]
 
-                    # h[ii] = conv2d(prev_inp, self.w[ii]) + self.b[ii]
                     h[ii] = Conv2D(self.w[ii])(prev_inp) + self.b[ii]
 
                     if self.use_bn[ii]:
-                        if self.frozen is not None and self.frozen[ii]:
-                            self.bn_frozen = True
-                        else:
-                            self.bn_frozen = False
-
-                        if self.init_weights is not None and \
-                                self.init_weights[ii] is not None:
-                            init_beta = self.init_weights[ii][
-                                'beta_{}'.format(self.num_copies)]
-                            init_gamma = self.init_weights[ii][
-                                'gamma_{}'.format(self.num_copies)]
-                        else:
-                            init_beta = None
-                            init_gamma = None
-
-                        self.batch_norm[ii] = BatchNorm(out_ch,
-                                                        init_beta=init_beta,
-                                                        init_gamma=init_gamma)
-                        h[ii] = self.batch_norm[ii](
+                        self.batch_norm[self.num_copies][
+                            ii] = BatchNorm(out_ch)
+                        h[ii] = self.batch_norm[self.num_copies][ii](
                             {'input': h[ii], 'phase_train': phase_train})
 
                     if self.act[ii] is not None:
@@ -176,10 +131,16 @@ class CNN(GraphBuilder):
             prefix = 'layer_{}/'.format(ii)
             results[prefix + 'w'] = self.w[ii]
             results[prefix + 'b'] = self.b[ii]
-            bn = self.batch_norm[ii]
-            if bn is not None:
-                self.add_prefix_to(
-                    prefix + 'bn', bn.get_save_var_dict(), results)
-            pass
+        for cc in xrange(self.num_copies):
+            for ii in xrange(self.nlayers):
+                prefix = 'layer_{}/'.format(ii)
+                if len(self.batch_norm) == 1:
+                    bn_name = 'bn'
+                else:
+                    bn_name = 'bn_{}'.format(cc)
+                bn = self.batch_norm[cc][ii]
+                if bn is not None:
+                    self.add_prefix_to(
+                        prefix + bn_name, bn.get_save_var_dict(), results)
         return results
     pass

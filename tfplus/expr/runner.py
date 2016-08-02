@@ -123,6 +123,7 @@ class SaverRunner(SessionRunner):
     def __init__(self):
         super(SaverRunner, self).__init__()
         self._log = logger.get()
+        self._step = 0
         self.register_option('save_ckpt')
         pass
 
@@ -132,10 +133,15 @@ class SaverRunner(SessionRunner):
     def set_save_ckpt(self, value):
         return self.set_option('save_ckpt', value)
 
+    @property
+    def step(self):
+        return self._step
+
     def run_step(self):
         if self.model.has_var('step'):
             step = self.get_session().run(self.model.get_var('step'))
             step = int(step)
+            self._step = int(step)
         else:
             step = 0
         if self.get_option('save_ckpt'):
