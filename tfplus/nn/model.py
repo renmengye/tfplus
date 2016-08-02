@@ -112,7 +112,8 @@ class Model(GraphBuilder, OptionBase):
     def get_cpu_list(self):
         return ['ResizeBilinear', 'ResizeBilinearGrad', 'Mod', 'CumMin',
                 'CumMinGrad', 'Hungarian', 'Reverse', 'SparseToDense',
-                'BatchMatMul', 'Gather', 'Print', 'InTopK', 'TopKV2']
+                'BatchMatMul', 'Gather', 'Print', 'InTopK', 'TopKV2',
+                'SparseApplyMomentum']
 
     def get_device_fn(self):
         """Choose device for different ops."""
