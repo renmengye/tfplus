@@ -151,6 +151,8 @@ class Logger(object):
         filename = filename.lstrip('/')
 
         callerstr = '{}:{}'.format(filename, line_number)
+        if len(callerstr) > 13:
+            callerstr = '...{}'.format(callerstr[-10:])
         printstr = '{} {} {} {}'.format(
             typstr_print, timestr, callerstr, message)
         logstr = '{} {} {} {}'.format(
