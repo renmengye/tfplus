@@ -21,11 +21,9 @@ tfplus.cmd_args.add('logs', 'str', '../logs')
 tfplus.cmd_args.add('localhost', 'str', 'http://localhost')
 tfplus.cmd_args.add('restore_model', 'str', None)
 tfplus.cmd_args.add('restore_logs', 'str', None)
-tfplus.cmd_args.add('batch_size', 'int', 128)
+tfplus.cmd_args.add('batch_size', 'int', 256)
 
 # Model options
-tfplus.cmd_args.add('inp_height', 'int', 32)
-tfplus.cmd_args.add('inp_width', 'int', 32)
 tfplus.cmd_args.add('inp_depth', 'int', 3)
 tfplus.cmd_args.add('layers', 'list<int>', [9, 9, 9])
 tfplus.cmd_args.add('strides', 'list<int>', [1, 2, 2])
@@ -43,8 +41,6 @@ class ResNetExampleModel(tfplus.nn.Model):
 
     def __init__(self, name='res_net_ex'):
         super(ResNetExampleModel, self).__init__(name=name)
-        self.register_option('inp_height')
-        self.register_option('inp_width')
         self.register_option('inp_depth')
         self.register_option('layers')
         self.register_option('strides')
@@ -59,11 +55,9 @@ class ResNetExampleModel(tfplus.nn.Model):
         pass
 
     def build_input(self):
-        inp_height = self.get_option('inp_height')
-        inp_width = self.get_option('inp_width')
         inp_depth = self.get_option('inp_depth')
         x = self.add_input_var(
-            'x', [None, inp_height, inp_width, inp_depth], 'float')
+            'x', [None, None, None, inp_depth], 'float')
         x_id = tf.identity(x)
         self.register_var('x_id', x_id)
         y_gt = self.add_input_var('y_gt', [None, 10], 'float')
@@ -75,8 +69,6 @@ class ResNetExampleModel(tfplus.nn.Model):
         }
 
     def init_var(self):
-        inp_height = self.get_option('inp_height')
-        inp_width = self.get_option('inp_width')
         inp_depth = self.get_option('inp_depth')
         layers = self.get_option('layers')
         strides = self.get_option('strides')
@@ -114,23 +106,17 @@ class ResNetExampleModel(tfplus.nn.Model):
         self.register_var('x_trans', x)
         channels = self.get_option('channels')
         strides = self.get_option('strides')
-        # x = tf.Print(x, [tf.reduce_mean(x), tf.reduce_sum(x)])
         h1 = self.conv(x)
         self.bn1 = tfplus.nn.BatchNorm(channels[0])
         h1 = self.bn1({'input': h1, 'phase_train': phase_train})
         h1 = tf.nn.relu(h1)
-        # h1 = tf.Print(h1, [tf.reduce_mean(h1), tf.reduce_sum(h1),
-        #                    tf.reduce_mean(self.conv.w[0]),
-        #                    tf.reduce_mean(self.conv.b[0])])
         hn = self.res_net({'input': h1, 'phase_train': phase_train})
         ratio = 32 / np.array(strides).prod()
         hn = tfplus.nn.AvgPool(ratio)(hn)
         cnn_dim = channels[-1]
         hn = tf.reshape(hn, [-1, cnn_dim])
         y_out = self.mlp({'input': hn, 'phase_train': phase_train})
-        return {
-            'y_out': y_out
-        }
+        return {'y_out': y_out}
 
     def build_loss(self, inp, output):
         y_gt = inp['y_gt']
@@ -141,7 +127,6 @@ class ResNetExampleModel(tfplus.nn.Model):
         self.add_loss(ce)
         total_loss = self.get_loss()
         self.register_var('loss', total_loss)
-
         correct = tf.equal(tf.argmax(y_gt, 1), tf.argmax(y_out, 1))
         acc = tf.reduce_sum(tf.to_float(correct)) / num_ex_f
         self.register_var('acc', acc)

@@ -200,8 +200,6 @@ class ResNetSBN(GraphBuilder):
                                         w=self.shortcut_w[ii],
                                         bn=self.shortcut_bn[ii],
                                         stride=s)
-                                    self.register_var(
-                                        'stage_{}/shortcut'.format(ii), prev_inp)
                             else:
                                 if ch_in != ch_out:
                                     with tf.variable_scope('shortcut'):
@@ -298,8 +296,8 @@ class ResNetSBN(GraphBuilder):
                             # Old version
                             # Relu after add
                             prev_inp = tf.nn.relu(prev_inp + h)
-                            self.register_var(
-                                'stage_{}/layer_{}/relu'.format(ii, jj), prev_inp)
+                            # self.register_var(
+                            #     'stage_{}/layer_{}/relu'.format(ii, jj), prev_inp)
                         else:
                             # New version
                             # Pure linear
