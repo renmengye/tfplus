@@ -97,8 +97,8 @@ class Logger(object):
         if t is None:
             t = datetime.datetime.now()
 
-        timestr = '{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(
-            t.year, t.month, t.day, t.hour, t.minute, t.second)
+        timestr = '{:04d}{:02d}{:02d}-{:02d}{:02d}{:02d}'.format(
+            t.year, t.month, t.day, t.hour, t.minute, t.second)[2:]
         # timestr = '{:04d}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(
         #     t.year, t.month, t.day, t.hour, t.minute, t.second)
         # timestr = '{:02d}:{:02d}:{:02d}'.format(t.hour, t.minute, t.second)
@@ -118,25 +118,25 @@ class Logger(object):
         """
         threadstr = '{}'.format(threading.current_thread().ident)[-4:]
         if typ == 'info':
-            typstr_print = '{}I{}:{}'.format(
+            typstr_print = '{}I{}{}'.format(
                 TERM_COLOR['green'], threadstr, TERM_COLOR['default'])
-            typstr_log = 'I{}:'.format(threadstr)
+            typstr_log = 'I{}'.format(threadstr)
         elif typ == 'warning':
-            typstr_print = '{}W{}:{}'.format(
+            typstr_print = '{}W{}{}'.format(
                 TERM_COLOR['yellow'], threadstr, TERM_COLOR['default'])
-            typstr_log = 'W{}:'.format(threadstr)
+            typstr_log = 'W{}'.format(threadstr)
         elif typ == 'debug':
-            typstr_print = '{}D{}:{}'.format(
+            typstr_print = '{}D{}{}'.format(
                 TERM_COLOR['yellow'], threadstr, TERM_COLOR['default'])
-            typstr_log = 'D{}:'.format(threadstr)
+            typstr_log = 'D{}'.format(threadstr)
         elif typ == 'error':
-            typstr_print = '{}E:{}'.format(
+            typstr_print = '{}E{}'.format(
                 TERM_COLOR['red'], threadstr, TERM_COLOR['default'])
-            typstr_log = 'E{}:'.format(threadstr)
+            typstr_log = 'E{}'.format(threadstr)
         elif typ == 'fatal':
-            typstr_print = '{}F:{}'.format(
+            typstr_print = '{}F{}'.format(
                 TERM_COLOR['red'], threadstr, TERM_COLOR['default'])
-            typstr_log = 'F{}:'.format(threadstr)
+            typstr_log = 'F{}'.format(threadstr)
         else:
             raise Exception('Unknown log type: {0}'.format(typ))
         timestr = self.get_time_str()
@@ -151,8 +151,8 @@ class Logger(object):
         filename = filename.lstrip('/')
 
         callerstr = '{}:{}'.format(filename, line_number)
-        if len(callerstr) > 13:
-            callerstr = '...{}'.format(callerstr[-10:])
+        if len(callerstr) > 20:
+            callerstr = '...{}'.format(callerstr[-17:])
         printstr = '{} {} {} {}'.format(
             typstr_print, timestr, callerstr, message)
         logstr = '{} {} {} {}'.format(
