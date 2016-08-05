@@ -186,5 +186,6 @@ class ImagePreprocessor(object):
                 self.image_in: image})
         # RGB => BGR
         image = image[:, :, [2, 1, 0]]
+        image = np.minimum(np.maximum(image, 0.0), 1.0)
 
         return image, rnd_package
