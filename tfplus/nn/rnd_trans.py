@@ -137,8 +137,8 @@ class ImageRandomTransform(GraphBuilder):
             x_rand = random_saturation(x_rand, 0.5, 1.5)
             x_rand = tf.image.random_brightness(x_rand, 0.2)
             x_rand = tf.image.random_contrast(x_rand, 0.5, 1.5)
-            x_rand = tf.clip_by_value(x_rand, 0.0, 1.0)
-
+        
+        x_rand = tf.clip_by_value(x_rand, 0.0, 1.0)
         x = (1.0 - phase_train_f) * x_ctr + phase_train_f * x_rand
         return x
     pass
