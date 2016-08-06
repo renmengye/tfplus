@@ -198,7 +198,7 @@ class TrainExperiment(Experiment):
                 pass
 
             # Dashboard reminder
-            if count % 10 == 0:
+            if count % 5 == 0:
                 self.log.info('Dashboard {}'.format(self.url))
                 pass
 

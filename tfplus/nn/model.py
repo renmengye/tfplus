@@ -143,6 +143,7 @@ class Model(GraphBuilder, OptionBase):
         if folder is not None:
             save_vars = self.get_save_var_dict()
             # print 'save var len', len(save_vars)
+            print save_vars
             if len(save_vars) > 0:
                 Saver(folder, var_dict=save_vars,
                       fname=self.name).restore(sess)
