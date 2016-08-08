@@ -116,21 +116,42 @@ class ImagePreprocessor(object):
             raise Exception('Unknown resize base {}'.format(self.resize_base))
         return siz2, pad, ratio
 
-    def redraw(self, old_size):
-        siz = int(self.random.uniform(self.rnd_resize[0], self.rnd_resize[1]))
-        siz2, pad, ratio = self.get_resize(old_size, siz)
-        siz3 = [siz2[0] + pad[0], siz2[1] + pad[1]]
-        offset = [0.0, 0.0]
-        offset[0] = int(self.random.uniform(0.0, siz3[0] - self.crop))
-        offset[1] = int(self.random.uniform(0.0, siz3[1] - self.crop))
-        hflip = self.random.uniform(0, 1) > 0.5
-        return {
-            'offset': offset,
-            'pad': pad,
-            'ratio': ratio,
-            'resize': siz2,
-            'hflip': hflip
-        }
+    def redraw(self, old_size, rnd=True):
+        if rnd:
+            siz = int(self.random.uniform(
+                self.rnd_resize[0], self.rnd_resize[1]))
+            siz2, pad, ratio = self.get_resize(old_size, siz)
+            siz3 = [siz2[0] + pad[0], siz2[1] + pad[1]]
+            offset = [0.0, 0.0]
+            offset[0] = int(self.random.uniform(0.0, siz3[0] - self.crop))
+            offset[1] = int(self.random.uniform(0.0, siz3[1] - self.crop))
+            hflip = self.random.uniform(0, 1) > 0.5
+            return {
+                'offset': offset,
+                'pad': pad,
+                'ratio': ratio,
+                'resize': siz2,
+                'hflip': hflip and self.rnd_hflip
+            }
+        else:
+            width = old_size[0]
+            height = old_size[1]
+            siz = self.resize
+            short = min(width, height)
+            lon = max(width, height)
+            resize, pad, ratio = self.get_resize((width, height), self.resize)
+            offset = [0, 0]
+            if self.resize_base == 'short':
+                offset[0] = int((resize[0] - self.crop) / 2)
+                offset[1] = int((resize[1] - self.crop) / 2)
+            hflip = False
+            return {
+                'offset': offset,
+                'pad': pad,
+                'ratio': ratio,
+                'resize': resize,
+                'hflip': hflip
+            }
 
     def process(self, image, rnd=True, rnd_package=None):
         """Process the images.
@@ -146,30 +167,11 @@ class ImagePreprocessor(object):
         height = image.shape[0]
 
         if rnd_package is None:
-            rnd_package = self.redraw((width, height))
-
-        offset_ = rnd_package['offset']
-        resize_ = rnd_package['resize']
-        hflip_ = rnd_package['hflip']
-        pad_ = rnd_package['pad']
-
-        if rnd:
-            # Random resize, random crop
-            resize = resize_
-            offset = offset_
-            pad = pad_
-            hflip = hflip_ and self.rnd_hflip
-        else:
-            # Fixed resize, center crop
-            siz = self.resize
-            short = min(width, height)
-            lon = max(width, height)
-            resize, pad, ratio = self.get_resize((width, height), self.resize)
-            offset = [0, 0]
-            if self.resize_base == 'short':
-                offset[0] = int((resize[0] - self.crop) / 2)
-                offset[1] = int((resize[1] - self.crop) / 2)
-            hflip = False
+            rnd_package = self.redraw((width, height), rnd=rnd)
+            resize = rnd_package['resize']
+            pad = rnd_package['pad']
+            hflip = rnd_package['hflip']
+            offset = rnd_package['offset']
 
         image = cv2.resize(image, resize, interpolation=cv2.INTER_CUBIC)
 
