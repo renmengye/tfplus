@@ -83,17 +83,24 @@ class ResNetImageNetModel(tfplus.nn.Model):
             x = x * 255.0 - self._img_mean  # raw 0-255 values.
         else:
             x = x * 2.0 - 1.0       # center at [-1, 1].
-        self.register_var('x_sub', x)
+        
+        if not self.has_var('x_sub'):
+            self.register_var('x_sub', x)
 
         h = self.conv1(x)
-        self.register_var('h_conv1', h)
+        if not self.has_var('h_conv1'):
+            self.register_var('h_conv1', h)
       
         h = self.bn1({'input': h, 'phase_train': phase_train})
-        self.register_var('h_bn1', h)
+
+        if not self.has_var('h_bn1'):
+            self.register_var('h_bn1', h)
         h = tf.nn.relu(h)
         h = MaxPool(3, stride=2)(h)
         h = self.res_net({'input': h, 'phase_train': phase_train})
-        self.register_var('h_last', h)
+        
+        if not self.has_var('h_last'):
+            self.register_var('h_last', h)
         h = tf.reduce_mean(h, [1, 2])
         y_out = self.fc(h)
         y_out = tf.nn.softmax(y_out)

@@ -87,7 +87,7 @@ class Conv2DW(GraphBuilder):
 
 class Linear(GraphBuilder):
 
-    def __init__(self, d_in, d_out, wd=None, scope='linear', bias=True, trainable=True):
+    def __init__(self, d_in, d_out, wd=None, scope='linear', bias=True, init_std=0.01, trainable=True):
         super(Linear, self).__init__()
         self.d_in = d_in
         self.d_out = d_out
@@ -95,14 +95,17 @@ class Linear(GraphBuilder):
         self.scope = scope
         self.bias = bias
         self.trainable = trainable
+        self.init_std = init_std
         pass
 
     def init_var(self):
         self.w = self.declare_var(
-            [self.d_in, self.d_out], name='w', wd=self.wd, trainable=self.trainable)
+            [self.d_in, self.d_out], name='w', wd=self.wd,
+            trainable=self.trainable, stddev=self.init_std)
         if self.bias:
             self.b = self.declare_var(
-                [self.d_out], name='b', wd=self.wd, trainable=self.trainable)
+                [self.d_out], name='b', wd=self.wd, trainable=self.trainable,
+                stddev=self.init_std)
         pass
 
     def build(self, inp):

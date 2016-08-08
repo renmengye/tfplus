@@ -25,7 +25,10 @@ class ImagePreprocessor(object):
         # readonly
         self._resize_base = resize_base
         self._image_in, self._image_out = self.build_colour_graph()
-        self._sess = tf.Session()
+        if rnd_colour:
+            self._sess = tf.Session()
+        else:
+            self._sess = None
         pass
 
     @property

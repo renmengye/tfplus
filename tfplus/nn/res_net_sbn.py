@@ -296,8 +296,10 @@ class ResNetSBN(GraphBuilder):
                             # Old version
                             # Relu after add
                             prev_inp = tf.nn.relu(prev_inp + h)
-                            # self.register_var(
-                            #     'stage_{}/layer_{}/relu'.format(ii, jj), prev_inp)
+                            if not self.has_var('stage_{}/layer_{}/relu'.format(ii, jj)):
+                                self.register_var(
+                                    'stage_{}/layer_{}/relu'.format(ii, jj), prev_inp)
+                                print 'stage_{}/layer_{}/relu'.format(ii, jj)
                         else:
                             # New version
                             # Pure linear

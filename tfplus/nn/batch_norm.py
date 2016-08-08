@@ -31,6 +31,9 @@ class BatchNorm(GraphBuilder):
                 [self.n_out], init_val=self.init_gamma, name='gamma',
                 trainable=trainable)
             self.ema = tf.train.ExponentialMovingAverage(decay=self.decay)
+            self.batch_mean = None
+            self.batch_var = None
+            self.ema_apply_op = None
             pass
         pass
 
@@ -40,15 +43,20 @@ class BatchNorm(GraphBuilder):
         phase_train = inp['phase_train']
 
         with tf.variable_scope(self.scope):
-            self.batch_mean, self.batch_var = tf.nn.moments(
-                x, [0, 1, 2], name='moments')
-            self.batch_mean.set_shape([self.n_out])
-            self.batch_var.set_shape([self.n_out])
+            # Here only decalre batch_mean once.
+            # If you want different statistics, construct two BatchNorm object.
+            # Otherwise it will only take statistics from the first pass.
+            if self.batch_mean is None:
+                self.batch_mean, self.batch_var = tf.nn.moments(
+                    x, [0, 1, 2], name='moments')
+                self.batch_mean.set_shape([self.n_out])
+                self.batch_var.set_shape([self.n_out])
 
             def mean_var_with_update():
-                ema_apply_op_local = self.ema.apply(
-                    [self.batch_mean, self.batch_var])
-                with tf.control_dependencies([ema_apply_op_local]):
+                if self.ema_apply_op is None:
+                    self.ema_apply_op = self.ema.apply(
+                        [self.batch_mean, self.batch_var])
+                with tf.control_dependencies([self.ema_apply_op]):
                     return tf.identity(self.batch_mean), \
                         tf.identity(self.batch_var)
 

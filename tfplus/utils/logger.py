@@ -130,11 +130,11 @@ class Logger(object):
                 TERM_COLOR['yellow'], threadstr, TERM_COLOR['default'])
             typstr_log = 'D{}'.format(threadstr)
         elif typ == 'error':
-            typstr_print = '{}E{}'.format(
+            typstr_print = '{}E{}{}'.format(
                 TERM_COLOR['red'], threadstr, TERM_COLOR['default'])
             typstr_log = 'E{}'.format(threadstr)
         elif typ == 'fatal':
-            typstr_print = '{}F{}'.format(
+            typstr_print = '{}F{}{}'.format(
                 TERM_COLOR['red'], threadstr, TERM_COLOR['default'])
             typstr_log = 'F{}'.format(threadstr)
         else:

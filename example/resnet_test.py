@@ -5,7 +5,8 @@ parallel implementation and floating point precision issue.)
 """
 
 import sys
-sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
+# sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
+sys.path.insert(0, '..')
 import tensorflow as tf
 import os
 import numpy as np
@@ -51,9 +52,10 @@ def load_new_model(sess, restore_path, nlayers, device='/cpu:0'):
             })
             inp_var = resnet.build_input()
             out_var = resnet.build(inp_var)
+            out_var2 = resnet.build(inp_var)
     saver = tf.train.Saver(resnet.get_save_var_dict())
     saver.restore(sess, restore_path)
-    return resnet, inp_var, out_var
+    return resnet, inp_var, out_var, out_var2
 
 
 def load_wrapper_model(sess, restore_path, nlayers, device='/cpu:0'):
@@ -242,8 +244,8 @@ def get_device_fn(device):
 
 def main():
     NLAYERS = 152
-    SAVE_FOLDER = '/ais/gobi4/mren/data'
-    # SAVE_FOLDER = '/dev/shm/models/res152'
+    # SAVE_FOLDER = '/ais/gobi4/mren/data'
+    SAVE_FOLDER = '/dev/shm/models/res152'
     WRITE_GRAPH = False
     GRAPH_DIR1 = '/u/mren/logs'
     GRAPH_DIR2 = '/u/mren/logs2'
@@ -252,7 +254,7 @@ def main():
     image_file = 'cat.jpg'
     image_data = load_image(image_file).reshape([1, 224, 224, 3])
 
-    weights_file = os.path.join(SAVE_FOLDER, 'res_{}.ckpt'.format(NLAYERS))
+    weights_file = os.path.join(SAVE_FOLDER, 'resnet_imagenet.ckpt-0'.format(NLAYERS))
 
     # Load old model
     output_old = {}
@@ -300,8 +302,8 @@ def main():
                 'scale1/batchnorm/add_1:0'), feed_dict=feed_dict)
             output_old['act2'] = sess.run(graph.get_tensor_by_name(
                 'scale2/block3/Relu:0'), feed_dict=feed_dict)
-            output_old['shortcut3'] = sess.run(graph.get_tensor_by_name(
-                'scale3/block1/shortcut/batchnorm/add_1:0'), feed_dict=feed_dict)
+            # output_old['shortcut3'] = sess.run(graph.get_tensor_by_name(
+            #     'scale3/block1/shortcut/batchnorm/add_1:0'), feed_dict=feed_dict)
             for ll in xrange(8):
                 output_old['act3_{}'.format(ll)] = sess.run(graph.get_tensor_by_name(
                     'scale3/block{}/Relu:0'.format(ll + 1)), feed_dict=feed_dict)
@@ -330,7 +332,7 @@ def main():
     output_new = {}
     with tf.Graph().as_default():
         with tf.Session() as sess:
-            model, inp_var, out_var = load_new_model(
+            model, inp_var, out_var, out_var2 = load_new_model(
                 sess, weights_file, NLAYERS,
                 device=get_device_fn(DEVICE))
 
@@ -367,8 +369,8 @@ def main():
                 model.get_var('h_bn1'), feed_dict=feed_dict)
             output_new['act2'] = sess.run(model.res_net.get_var(
                 'stage_0/layer_2/relu'), feed_dict=feed_dict)
-            output_new['shortcut3'] = sess.run(
-                model.res_net.get_var('stage_1/shortcut'), feed_dict=feed_dict)
+            # output_new['shortcut3'] = sess.run(
+            #     model.res_net.get_var('stage_1/shortcut'), feed_dict=feed_dict)
             for ll in xrange(8):
                 output_new['act3_{}'.format(ll)] = sess.run(
                     model.res_net.get_var('stage_1/layer_{}/relu'.format(ll)),
@@ -380,7 +382,7 @@ def main():
 
             print '-----------------------------------------------------------'
             print 'New model pass 2'
-            print_prob(sess.run(out_var, feed_dict=feed_dict)[0])
+            print_prob(sess.run(out_var2, feed_dict=feed_dict)[0])
             print '-----------------------------------------------------------'
 
     output_wrapper = {}
@@ -423,8 +425,8 @@ def main():
                 model.get_var('h_bn1'), feed_dict=feed_dict)
             output_wrapper['act2'] = sess.run(model.res_net.get_var(
                 'stage_0/layer_2/relu'), feed_dict=feed_dict)
-            output_wrapper['shortcut3'] = sess.run(
-                model.res_net.get_var('stage_1/shortcut'), feed_dict=feed_dict)
+            # output_wrapper['shortcut3'] = sess.run(
+            #     model.res_net.get_var('stage_1/shortcut'), feed_dict=feed_dict)
             for ll in xrange(8):
                 output_wrapper['act3_{}'.format(ll)] = sess.run(
                     model.res_net.get_var('stage_1/layer_{}/relu'.format(ll)),
