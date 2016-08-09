@@ -92,7 +92,6 @@ class LSTM(GraphBuilder):
         self.lazy_init_var()
         x = inp['input']
         state = inp['state']
-
         with tf.variable_scope(self.scope):
             c = tf.slice(state, [0, 0], [-1, self.hid_dim])
             h = tf.slice(state, [0, self.hid_dim], [-1, self.hid_dim])
@@ -107,8 +106,7 @@ class LSTM(GraphBuilder):
             c = g_f * c + g_i * u
             h = g_o * tf.tanh(c)
             state = tf.concat(1, [c, h])
-
-        return {'state': state}
+        return state
 
     def get_save_var_dict(self):
         results = {}

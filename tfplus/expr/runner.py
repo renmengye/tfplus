@@ -431,7 +431,12 @@ class AccumulateRunner(BasicRunner):
     def __init__(self):
         super(AccumulateRunner, self).__init__()
         self._num_batch = 1
+        self._input_identity = []
         pass
+
+    @property
+    def input_identity(self):
+        return self._input_identity
 
     @property
     def num_batch(self):
@@ -444,6 +449,10 @@ class AccumulateRunner(BasicRunner):
         self._num_batch = value
         return self
 
+    def add_input_identity(self, name):
+        self._input_identity.append(name)
+        return self
+
     def run_step(self):
         bat_sz_total = 0
         results = {}
@@ -453,6 +462,9 @@ class AccumulateRunner(BasicRunner):
             self.log.warning(
                 'Empty outputs list for runner "{}"'.format(self.name))
         for key in self.outputs:
+            results[key] = []
+            pass
+        for key in self.input_identity:
             results[key] = []
             pass
         results['step_time'] = []
@@ -474,6 +486,8 @@ class AccumulateRunner(BasicRunner):
                         results[key] = []
                     results[key].append(_results[key])
                 pass
+            for key in self.input_identity:
+                results[key].append(inp[key])
             pass
 
         # Concatenate all batches.

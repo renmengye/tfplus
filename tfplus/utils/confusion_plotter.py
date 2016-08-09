@@ -2,6 +2,7 @@ import numpy as np
 from plotter import Plotter
 from listener import get_factory
 import logger
+import numpy as np
 import matplotlib.pyplot as plt
 
 class ConfusionMatrixPlotter(Plotter):
@@ -29,6 +30,7 @@ class ConfusionMatrixPlotter(Plotter):
             cm[cls_gt[ii], cls_out[ii]] += 1
         self.log.info('Unnormalized confusion matrix')
         self.log.info(cm)
+        np.savetxt(self.filename.split('.png')[0] + '.txt', cm)
         ss = cm.sum(axis=1).reshape([-1, 1])
         ss = ss + (ss == 0).astype('float32')
         cm = cm / ss
