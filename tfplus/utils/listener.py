@@ -28,6 +28,11 @@ class Listener(object):
     def listen(self, results):
         pass
 
+    def finalize(self):
+        pass
+
+    def stage(self):
+        pass
     pass
 
 

@@ -48,6 +48,9 @@ class ConfusionMatrixPlotter(Plotter):
         cls_gt = results['class_gt']
         self.plot(cls_out, cls_gt)
         self.register()
+
+    def finalize(self):
+        pass
     pass
 
 get_factory().register('confusion', ConfusionMatrixPlotter)
