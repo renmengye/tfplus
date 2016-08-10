@@ -354,11 +354,55 @@ class BasicRunner(SessionRunner):
                 results[key] = inp[key]
 
         self.write_log(results)
-        return True
+        return results
 
     pass
 
+
 get_factory().register('basic', BasicRunner)
+
+
+class EvalRunner(BasicRunner):
+    """A runner that runs a full cycle of the iterator."""
+
+    def __init__(self):
+        super(EvalRunner, self).__init__()
+        self._cycle = False
+
+    @property
+    def cycle(self):
+        return self._cycle
+
+    def get_cycle(self):
+        return self._cycle
+
+    def set_cycle(self, value):
+        self._cycle = value
+        return self
+
+    def run_step(self):
+        for inp in self.iter:
+            if len(self.outputs) > 0:
+                results = self._run_step(inp)
+            else:
+                results = {}
+            # Add identity mappings to ease things up.
+            for key in inp.iterkeys():
+                if key not in results:
+                    results[key] = inp[key]
+            for listener in self.listeners:
+                listener.listen(results)
+
+        for listener in self.listeners:
+            listener.stage()
+
+        if self.cycle:
+            self.iter.reset()
+        else:
+            raise StopIteration
+
+
+get_factory().register('eval', EvalRunner)
 
 
 class AverageRunner(BasicRunner):

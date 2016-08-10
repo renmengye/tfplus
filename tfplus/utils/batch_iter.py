@@ -160,6 +160,10 @@ class BatchIterator(IBatchIterator):
         pass
 
 if __name__ == '__main__':
-    for ii in BatchIterator(400, batch_size=32, progress_bar=True,
-                            get_fn=lambda x: x, cycle=True, shuffle=False):
+    b = BatchIterator(400, batch_size=32, progress_bar=False,
+                            get_fn=lambda x: x, cycle=False, shuffle=False)
+    for ii in b:
+        print ii
+    b.reset()
+    for ii in b:
         print ii
