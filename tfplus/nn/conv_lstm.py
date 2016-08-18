@@ -1,5 +1,5 @@
 from graph_builder import GraphBuilder
-from ops import Conv2D
+from ops import Conv2D, DilatedConv2D
 
 import tensorflow as tf
 
@@ -7,7 +7,7 @@ import tensorflow as tf
 class ConvLSTM(GraphBuilder):
 
     def __init__(self, filter_size, inp_depth, hid_depth, wd=None, scope='lstm',
-                 init_weights=None, trainable=False):
+                 init_weights=None, trainable=False, dilation=False, stride=1):
         super(ConvLSTM, self).__init__()
         self.filter_size = filter_size
         self.inp_depth = inp_depth
@@ -16,6 +16,8 @@ class ConvLSTM(GraphBuilder):
         self.scope = scope
         self.init_w = init_weights
         self.trainable = trainable
+        self.stride = stride
+        self.dilation = dilation
         pass
 
     def init_var(self):
@@ -103,19 +105,26 @@ class ConvLSTM(GraphBuilder):
         self.lazy_init_var()
         x = inp['input']
         state = inp['state']
+        s = self.stride
 
         with tf.variable_scope(self.scope):
             c = tf.slice(state, [0, 0, 0, 0], [-1, -1, -1, self.hid_depth])
             h = tf.slice(state, [0, 0, 0, self.hid_depth],
                          [-1, -1, -1, self.hid_depth])
-            g_i = tf.sigmoid(Conv2D(self.w_xi)(x) +
-                             Conv2D(self.w_hi)(h) + self.b_i)
-            g_f = tf.sigmoid(Conv2D(self.w_xf)(x) +
-                             Conv2D(self.w_hf)(h) + self.b_f)
-            g_o = tf.sigmoid(Conv2D(self.w_xo)(x) +
-                             Conv2D(self.w_ho)(h) + self.b_o)
-            u = tf.tanh(Conv2D(self.w_xu)(x) +
-                        Conv2D(self.w_hu)(h) + self.b_u)
+            if not self.dilation:
+                opr = Conv2D
+            else:
+                opr = DilatedConv2D
+                xs = x.get_shape()
+                h.set_shape([xs[0], xs[1], xs[2], self.hid_depth])
+            g_i = tf.sigmoid(opr(self.w_xi, s)(x) +
+                             opr(self.w_hi, s)(h) + self.b_i)
+            g_f = tf.sigmoid(opr(self.w_xf, s)(x) +
+                             opr(self.w_hf, s)(h) + self.b_f)
+            g_o = tf.sigmoid(opr(self.w_xo, s)(x) +
+                             opr(self.w_ho, s)(h) + self.b_o)
+            u = tf.tanh(opr(self.w_xu, s)(x) +
+                        opr(self.w_hu, s)(h) + self.b_u)
             c = g_f * c + g_i * u
             h = g_o * tf.tanh(c)
             state = tf.concat(3, [c, h])

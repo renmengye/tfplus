@@ -108,6 +108,7 @@ def get_data(split, batch_size=128, cycle=True, max_queue_size=10,
         .set_name('train')
         .add_output('loss')
         .add_output('train_step')
+        .add_output('step_time')
         .add_csv_listener('Loss', 'loss', 'train')
         .add_csv_listener('Step Time', 'step_time', 'train')
         .add_cmd_listener('Step', 'step')

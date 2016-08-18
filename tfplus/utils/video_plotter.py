@@ -13,14 +13,7 @@ class VideoPlotter(ThumbnailPlotter):
         self.max_num_frame = max_num_frame
         pass
 
-    def listen(self, results):
-        """Plot results.
-
-        Args:
-            images: [B, T, H, W] or [B, T, H, W, 3] or [B, H, W, T]
-        """
-        axis = 1
-        img = results['images']
+    def plot(self, img, axis=1):
         num_ex = img.shape[0]
         num_items = min(img.shape[axis], self.max_num_frame)
         if img.shape[axis] > self.max_num_frame:
@@ -52,8 +45,10 @@ class VideoPlotter(ThumbnailPlotter):
                     ax = axarr[row]
                 elif num_col > 1:
                     ax = axarr[col]
-                if x.shape[-1] == 3:
+                if x.shape[-1] == 3 and len(x.shape) == 3:
                     x = x[:, :, [2, 1, 0]]
+                if x.shape[-1] == 1 and len(x.shape) == 3:
+                    x = x.reshape(x.shape[0], x.shape[1])
                 ax.imshow(x, cmap=self.cmap)
                 ax.text(0, -0.5, '[{:.2g}, {:.2g}]'.format(x.min(), x.max()),
                         color=(0, 0, 0), size=8)
@@ -62,6 +57,18 @@ class VideoPlotter(ThumbnailPlotter):
         plt.savefig(self.filename, dpi=150)
         plt.close('all')
         self.register()
+        pass
+
+    def listen(self, results):
+        """Plot results.
+
+        Args:
+            images: [B, T, H, W] or [B, T, H, W, 3] or [B, H, W, T]
+        """
+        axis = 1
+        img = results['images']
+        # print self.name, self.filename, img.shape
+        self.plot(img, axis=axis)
         pass
     pass
 
