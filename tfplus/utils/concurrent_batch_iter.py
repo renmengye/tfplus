@@ -104,7 +104,7 @@ class ConcurrentBatchIterator(IBatchIterator):
         pass
 
     def next(self):
-        self.scan(self.counter % 20 == 0)
+        self.scan(do_print=(self.counter % 20 == 0))
         if self.counter % 20 == 0:
             self.counter = 0
         batch = self.q.get()
