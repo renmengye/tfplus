@@ -45,7 +45,7 @@ class ConcurrentBatchIterator(IBatchIterator):
         self.counter = 0
         pass
 
-    def scan(self):
+    def scan(self, do_print=False):
         dead = []
         num_alive = 0
         for ff in self.fetchers:
@@ -57,19 +57,20 @@ class ConcurrentBatchIterator(IBatchIterator):
                 self.fetchers.append(fnew)
             else:
                 num_alive += 1
-        self.log.info('Number of alive threads: {}'.format(num_alive))
-        for dd in dead:
-            self.fetchers.remove(dd)
-        pass
-
-    def next(self):
-        if self.counter % 10 == 0:
+        if do_print:
+            self.log.info('Number of alive threads: {}'.format(num_alive))
             s = self.q.qsize()
             if s > self.max_queue_size / 3:
                 self.log.info('Data queue size: {}'.format(s))
             else:
                 self.log.warning('Data queue size: {}'.format(s))
-            self.scan()
+        for dd in dead:
+            self.fetchers.remove(dd)
+        pass
+
+    def next(self):
+        self.scan(self.counter % 20 == 0)
+        if self.counter % 20 == 0:
             self.counter = 0
         batch = self.q.get()
         if batch is None:
@@ -77,4 +78,8 @@ class ConcurrentBatchIterator(IBatchIterator):
         self.q.task_done()
         self.counter += 1
         return batch
+
+    def reset(self):
+        self.batch_iter.reset()
+        pass
     pass
