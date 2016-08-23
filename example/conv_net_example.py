@@ -10,6 +10,7 @@ import os
 import tensorflow as tf
 import tfplus
 import tfplus.data.mnist
+from tfplus.utils import BatchIterator
 
 tfplus.init('Train a simple ConvNet on MNIST')
 
@@ -168,8 +169,9 @@ if __name__ == '__main__':
 
     # Initialize data.
     def get_data(split, batch_size=100, cycle=True):
-        return tfplus.data.create_from_main('mnist', split=split).set_iter(
-            batch_size=100, cycle=True)
+        dp = tfplus.data.create_from_main('mnist', split=split)
+        return BatchIterator(dp.get_size(), batch_size=batch_size, cycle=cycle,
+                             get_fn=dp.get_batch_idx)
 
     # Initialize experiment.
     (tfplus.experiment.create_from_main('train')
@@ -185,13 +187,13 @@ if __name__ == '__main__':
      .add_runner(
         tfplus.runner.create_from_main('average')
         .set_name('train')
-        .set_outputs(['loss', 'train_step'])
+        .set_outputs(['loss', 'train_step', 'step_time'])
         .add_csv_listener('Loss', 'loss', 'train')
         .add_csv_listener('Step Time', 'step_time', 'train')
         .add_cmd_listener('Step', 'step')
         .add_cmd_listener('Loss', 'loss')
         .add_cmd_listener('Step Time', 'step_time')
-        .set_data_provider(get_data('train', batch_size=100, cycle=True))
+        .set_iter(get_data('train', batch_size=100, cycle=True))
         .set_phase_train(True)
         .set_num_batch(100)
         .set_interval(1))
@@ -205,7 +207,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'train')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_data_provider(get_data('train', batch_size=100, cycle=True))
+        .set_iter(get_data('train', batch_size=100, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -215,7 +217,7 @@ if __name__ == '__main__':
         .set_outputs(['acc'])
         .add_csv_listener('Accuracy', 'acc', 'valid')
         .add_cmd_listener('Accuracy', 'acc')
-        .set_data_provider(get_data('valid', batch_size=100, cycle=True))
+        .set_iter(get_data('valid', batch_size=100, cycle=True))
         .set_phase_train(False)
         .set_num_batch(10)
         .set_interval(10))
@@ -224,7 +226,7 @@ if __name__ == '__main__':
         .set_name('plotter')
         .set_outputs(['x_id'])
         .add_plot_listener('Input', {'x_id': 'images'})
-        .set_data_provider(get_data('valid', batch_size=10, cycle=True))
+        .set_iter(get_data('valid', batch_size=10, cycle=True))
         .set_phase_train(False)
         .set_interval(10))).run()
     pass

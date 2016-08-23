@@ -119,6 +119,7 @@ class CNN(GraphBuilder):
                     if self.pool[ii] > 1:
                         h[ii] = MaxPool(self.pool[ii])(h[ii])
                     pass
+                    # h[ii] = tf.Print(h[ii], [ii, tf.reduce_mean(h[ii])])
                 pass
             pass
         self.num_copies += 1
