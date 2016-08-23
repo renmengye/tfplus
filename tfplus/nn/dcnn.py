@@ -39,7 +39,6 @@ class DCNN(GraphBuilder):
         f = self.filter_size
         ch = self.channels
         wd = self.wd
-        self.batch_norm.append([None] * self.nlayers)
         trainable = self.trainable
         with tf.variable_scope(self.scope):
             in_ch = ch[0]
@@ -71,6 +70,7 @@ class DCNN(GraphBuilder):
         with tf.variable_scope(self.scope):
             h = [None] * self.nlayers
             out_shape = [None] * self.nlayers
+            self.batch_norm.append([None] * self.nlayers)
             batch = tf.shape(x)[0: 1]
             inp_size = tf.shape(x)[1: 3]
             cum_pool = 1
@@ -97,11 +97,12 @@ class DCNN(GraphBuilder):
 
                     h[ii] = tf.nn.conv2d_transpose(
                         prev_inp, self.w[ii], out_shape[ii],
-                        strides=[1, self.pool[ii], self.pool[ii], 1]) + self.b[ii]
+                        strides=[1, self.pool[ii], self.pool[ii], 1]) + \
+                        self.b[ii]
 
                     if self.use_bn[ii]:
-                        self.batch_norm[self.num_copies][
-                            ii] = BatchNorm(out_ch)
+                        self.batch_norm[self.num_copies][ii] = \
+                            BatchNorm(out_ch)
                         h[ii] = self.batch_norm[self.num_copies][ii](
                             {'input': h[ii], 'phase_train': phase_train})
 
