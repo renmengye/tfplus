@@ -204,7 +204,8 @@ class ImagePreprocessor(object):
         hflip = rnd_package['hflip']
         offset = rnd_package['offset']
 
-        image = cv2.resize(image, resize, interpolation=cv2.INTER_CUBIC)
+        image = cv2.resize(image, (resize[0], resize[1]),
+                           interpolation=cv2.INTER_CUBIC)
 
         if pad[0] > 0 or pad[1] > 0:
             image = np.pad(image, [[pad[1], pad[1]], [pad[0], pad[0]], [0, 0]],

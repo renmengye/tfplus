@@ -39,8 +39,10 @@ class CNN(GraphBuilder):
         self.num_copies = 0
         if initialization == 'msra':
             self.compute_std = lambda s: np.sqrt(2 / s[0] * s[1] * s[3])
-        else:
+        elif initialization is None:
             self.compute_std = lambda s: 0.01
+        else:
+            self.compute_std = initialization
 
         super(CNN, self).__init__()
 
