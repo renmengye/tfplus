@@ -27,7 +27,6 @@ class BatchProducer(threading.Thread):
             try:
                 b = self.batch_iter.next()
                 self.q.put(b)
-                self.log.info(('Put', b))
             except StopIteration:
                 self.q.put(None)
                 break
