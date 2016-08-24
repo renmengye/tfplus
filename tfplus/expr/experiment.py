@@ -172,10 +172,11 @@ class TrainExperiment(Experiment):
         log_manager.register(
             'model.yaml', 'plain', 'Model Hyperparameters')
         cmd_fname = os.path.join(self.logs_folder, 'cmd.log')
-        with open(cmd_fname, 'w') as f:
-            f.write(' '.join(sys.argv))
-        log_manager.register(
-            'cmd.log', 'plain', 'Command-line Arguments')
+        if not os.path.exists(cmd_fname):
+            with open(cmd_fname, 'w') as f:
+                f.write(' '.join(sys.argv))
+            log_manager.register(
+                'cmd.log', 'plain', 'Command-line Arguments')
 
         # Counters
         count = 0

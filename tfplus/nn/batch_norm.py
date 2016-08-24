@@ -4,7 +4,7 @@ import tensorflow as tf
 
 class BatchNorm(GraphBuilder):
 
-    def __init__(self, n_out, scope='bn',
+    def __init__(self, n_out, axes=[0, 1, 2], scope='bn',
                  affine=True, init_beta=None, init_gamma=None, trainable=True,
                  decay=0.9):
         super(BatchNorm, self).__init__()
@@ -15,6 +15,7 @@ class BatchNorm(GraphBuilder):
         self.init_gamma = init_gamma
         self.trainable = trainable
         self.decay = decay
+        self.axes = axes
         pass
 
     def init_var(self):
@@ -48,7 +49,7 @@ class BatchNorm(GraphBuilder):
             # Otherwise it will only take statistics from the first pass.
             if self.batch_mean is None:
                 self.batch_mean, self.batch_var = tf.nn.moments(
-                    x, [0, 1, 2], name='moments')
+                    x, self.axes, name='moments')
                 self.batch_mean.set_shape([self.n_out])
                 self.batch_var.set_shape([self.n_out])
 

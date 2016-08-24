@@ -49,7 +49,8 @@ class Saver():
                 if not fullname.endswith('.meta'):
                     ckpt_fname_list.append(fullname)
         if len(ckpt_fname_list) == 0:
-            raise Exception('No checkpoint file found.')
+            raise Exception(
+                'No checkpoint file found {}'.format(ckpt_fname_pattern))
         ckpt_fname_step = [int(fn.split('-')[-1]) for fn in ckpt_fname_list]
         latest_step = max(ckpt_fname_step)
 

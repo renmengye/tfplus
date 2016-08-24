@@ -1,12 +1,12 @@
 from graph_builder import GraphBuilder
-
+from batch_norm import BatchNorm
 import tensorflow as tf
 
 
 class MLP(GraphBuilder):
 
-    def __init__(self, dims, act, add_bias=True, dropout_keep=None,
-                 wd=None, scope='mlp', init_weights=None,
+    def __init__(self, dims, act, use_bn=None, add_bias=True,
+                 dropout_keep=None, wd=None, scope='mlp', init_weights=None,
                  frozen=None):
         """Add MLP. N = number of layers.
 
@@ -27,6 +27,12 @@ class MLP(GraphBuilder):
         self.scope = scope
         self.init_weights = init_weights
         self.frozen = frozen
+        if use_bn is None:
+            self.use_bn = [False] * self.nlayers
+            self.bn = [None] * self.nlayers
+        else:
+            self.use_bn = use_bn
+            self.bn = [None] * self.nlayers
 
         super(MLP, self).__init__()
 
@@ -58,6 +64,9 @@ class MLP(GraphBuilder):
                         trainable = False
                     else:
                         trainable = True
+
+                    if self.use_bn[ii]:
+                        self.bn[ii] = BatchNorm(nin, [0])
 
                     self.w[ii] = self.declare_var(
                         [nin, nout],
@@ -92,6 +101,9 @@ class MLP(GraphBuilder):
                     else:
                         prev_inp = h[ii - 1]
 
+                    if self.use_bn[ii]:
+                        prev_inp = self.bn[ii](prev_inp)
+
                     if self.dropout_keep is not None:
                         if self.dropout_keep[ii] is not None:
                             prev_inp = nn.Dropout(self.dropout_keep[ii],
@@ -117,6 +129,9 @@ class MLP(GraphBuilder):
             prefix = 'layer_{}/'.format(ii)
             results[prefix + 'w'] = self.w[ii]
             results[prefix + 'b'] = self.b[ii]
+            if self.bn[ii] is not None:
+                self.add_prefix_to(
+                    prefix + 'bn', self.bn[ii].get_save_var_dict(), results)
             pass
         return results
     pass
