@@ -58,6 +58,7 @@ class Model(GraphBuilder, OptionBase):
         self._has_built_all = False
         self._folder = None
         self._global_step = None
+        self._avg_var = None
         pass
 
     @property
@@ -177,7 +178,13 @@ class Model(GraphBuilder, OptionBase):
         if self.folder is None:
             raise Exception('Has not set save folder yet')
         if self._saver is None:
-            save_vars = self.get_save_var_dict()
+            if self._avg_var is None:
+                save_vars = self.get_save_var_dict()
+            else:
+                self.log.info('Saving moving average copy of parameters.')
+                # Save EMA copy of the variables instead (warning, this
+                # basically makes restore training very hard.)
+                save_vars = self._avg_var
             if len(save_vars) > 0:
                 self._saver = Saver(self.folder,
                                     var_dict=save_vars,
@@ -343,7 +350,7 @@ class Model(GraphBuilder, OptionBase):
                 loss_var = self.build_loss(inp_var, output_var)
         return self
 
-    def build_all(self):
+    def build_all(self, param_avg=False):
         """Build all nodes."""
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
@@ -354,6 +361,11 @@ class Model(GraphBuilder, OptionBase):
                 output_var = self.build(inp_var)
                 loss_var = self.build_loss(inp_var, output_var)
                 train_step = self.build_optim(loss_var)
+                if param_avg:
+                    ema_op, avg_var = self.get_average_var()
+                    self._avg_var = avg_var
+                    with tf.control_dependencies([train_step, ema_op]):
+                        train_step = tf.no_op(name='train_step')
                 self.register_var('train_step', train_step)
         return self
 
@@ -376,6 +388,20 @@ class Model(GraphBuilder, OptionBase):
             pass
         return my_var_list
 
+    def get_average_var(self):
+        save_var = self.get_save_var_dict()
+        # Track the moving averages of all trainable variables.
+        ema = tf.train.ExponentialMovingAverage(0.99)
+        trainable_variables = []
+        var_names = save_var.keys()
+        for kk in var_names:
+            trainable_variables.append(save_var[kk])
+        ema_op = ema.apply(trainable_variables)
+        avg_var_dict = {}
+        for kk in var_names:
+            avg_var_dict[kk] = ema.average(save_var[kk])
+        return ema_op, avg_var_dict
+
     def get_save_var_dict(self):
         """Get a dictionary of variables to restore."""
         raise Exception('Not implemented')
@@ -396,7 +422,10 @@ class Model(GraphBuilder, OptionBase):
         return aux_vars
 
     def get_save_var_list_recursive(self):
-        return self.get_save_var_dict().values()
+        val = self.get_save_var_dict().values()
+        if self._avg_var is not None:
+            val.extend(self._avg_var)
+        return val
     pass
 
 
