@@ -60,7 +60,7 @@ class BatchConsumer(threading.Thread):
 
 class ConcurrentBatchIterator(IBatchIterator):
 
-    def __init__(self, batch_iter, max_queue_size=10, num_threads=5):
+    def __init__(self, batch_iter, max_queue_size=10, num_threads=5, log_queue=20):
         """
         Data provider wrapper that supports concurrent data fetching.
         """
@@ -74,6 +74,7 @@ class ConcurrentBatchIterator(IBatchIterator):
         self.init_fetchers()
         self.counter = 0
         self.relaunch = True
+        self.log_queue = log_queue
         pass
 
     def init_fetchers(self):
@@ -109,8 +110,8 @@ class ConcurrentBatchIterator(IBatchIterator):
         pass
 
     def next(self):
-        self.scan(do_print=(self.counter % 20 == 0))
-        if self.counter % 20 == 0:
+        self.scan(do_print=(self.counter % self.log_queue == 0))
+        if self.counter % self.log_queue == 0:
             self.counter = 0
         batch = self.q.get()
         self.q.task_done()
