@@ -33,7 +33,7 @@ class ResNetSBN(GraphBuilder):
     def __init__(self, layers, channels, strides, bottleneck=False,
                  dilation=False, wd=None, scope='res_net',
                  shortcut='projection', initialization='msra',
-                 compatible=False, trainable=False):
+                 compatible=False, trainable=True):
         super(ResNetSBN, self).__init__()
         self.channels = channels
         self.layers = layers
