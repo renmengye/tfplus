@@ -160,6 +160,8 @@ class ResNetSBN(GraphBuilder):
                                     [f_, f_, ch_in_, ch_out_]))
                                 self.log.info('Weights: {}'.format(
                                     self.w[ii][jj][kk].name))
+                                self.log.info('Trainable: {}'.format(
+                                    self.trainable))
                                 pass
                             pass
                         pass
