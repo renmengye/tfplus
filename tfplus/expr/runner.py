@@ -204,6 +204,7 @@ class BasicRunner(SessionRunner):
     def write_log(self, results):
         for listener in self.listeners:
             listener.listen(results)
+            listener.stage()
             pass
 
     def add_listener(self, listener):
@@ -539,7 +540,7 @@ class AccumulateRunner(BasicRunner):
         # Concatenate all batches.
         for key in results.iterkeys():
             results[key] = np.array(results[key])
-            print key, results[key].shape
+            # print key, results[key].shape
             pass
 
         # Do not average steps.

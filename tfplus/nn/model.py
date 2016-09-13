@@ -391,7 +391,7 @@ class Model(GraphBuilder, OptionBase):
     def get_average_var(self):
         save_var = self.get_save_var_dict()
         # Track the moving averages of all trainable variables.
-        ema = tf.train.ExponentialMovingAverage(0.99)
+        ema = tf.train.ExponentialMovingAverage(0.999)
         trainable_variables = []
         var_names = save_var.keys()
         for kk in var_names:

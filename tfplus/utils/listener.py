@@ -50,4 +50,7 @@ class AdapterListener(Listener):
             pass
         return self._listener.listen(results2)
 
+    def stage(self):
+        self._listener.stage()
+
 get_factory().register('adapter', AdapterListener)

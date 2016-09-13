@@ -33,7 +33,7 @@ class ResNetSBN(GraphBuilder):
     def __init__(self, layers, channels, strides, bottleneck=False,
                  dilation=False, wd=None, scope='res_net',
                  shortcut='projection', initialization='msra',
-                 compatible=False, trainable=True):
+                 compatible=False, trainable=True, last_num_trainable=-1):
         super(ResNetSBN, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -50,6 +50,7 @@ class ResNetSBN(GraphBuilder):
         self.shortcut = shortcut
         self.compatible = compatible
         self.trainable = trainable
+        self.last_num_trainable = last_num_trainable
         self.wd = wd
         if bottleneck:
             self.unit_depth = 3
@@ -106,6 +107,8 @@ class ResNetSBN(GraphBuilder):
         return prev_inp
 
     def init_var(self):
+        layer_count = 0
+        total_num_layers = np.array(self.layers).sum()
         with tf.variable_scope(self.scope):
             for ii in xrange(self.num_stage):
                 ch_in = self.channels[ii]
@@ -113,8 +116,22 @@ class ResNetSBN(GraphBuilder):
                 with tf.variable_scope('stage_{}'.format(ii)):
                     self.w[ii] = [None] * self.layers[ii]
                     self.bn[ii] = [None] * self.layers[ii]
-                    # self.b[ii] = [None] * self.layers[ii]
+
                     for jj in xrange(self.layers[ii]):
+
+                        # See whether this layer is trainable.
+                        if self.trainable:
+                            if self.last_num_trainable < 0:
+                                _trainable = True
+
+                            else:
+                                if layer_count >= total_num_layers - self.last_num_trainable:
+                                    _trainable = True
+                                else:
+                                    _trainable = False
+                        else:
+                            _trainable = False
+
                         if jj > 0:
                             ch_in = ch_out
                             pass
@@ -129,10 +146,10 @@ class ResNetSBN(GraphBuilder):
                                         name='w',
                                         stddev=self.compute_std(
                                             [1, 1, ch_in, ch_out]),
-                                        trainable=self.trainable
+                                        trainable=_trainable
                                     )
                                     self.shortcut_bn[ii] = BatchNorm(
-                                        ch_out, trainable=self.trainable)
+                                        ch_out, trainable=_trainable)
                                 pass
                             pass
                         with tf.variable_scope('layer_{}'.format(jj)):
@@ -145,14 +162,14 @@ class ResNetSBN(GraphBuilder):
                                         name='w',
                                         stddev=self.compute_std(
                                             [f_, f_, ch_in_, ch_out_]),
-                                        trainable=self.trainable
+                                        trainable=_trainable
                                     )
                                     if self.compatible:
                                         bn_ch = ch_out_
                                     else:
                                         bn_ch = ch_in_
                                     self.bn[ii][jj][kk] = BatchNorm(
-                                        bn_ch, trainable=self.trainable)
+                                        bn_ch, trainable=_trainable)
                                     self.log.info('Init SD: {}'.format(
                                         self.compute_std(
                                             [f_, f_, ch_in_, ch_out_])))
@@ -161,9 +178,10 @@ class ResNetSBN(GraphBuilder):
                                 self.log.info('Weights: {}'.format(
                                     self.w[ii][jj][kk].name))
                                 self.log.info('Trainable: {}'.format(
-                                    self.trainable))
+                                    _trainable))
                                 pass
                             pass
+                        layer_count += 1
                         pass
                     pass
                 pass

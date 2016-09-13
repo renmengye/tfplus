@@ -102,7 +102,8 @@ class MLP(GraphBuilder):
                         prev_inp = h[ii - 1]
 
                     if self.use_bn[ii]:
-                        prev_inp = self.bn[ii](prev_inp)
+                        prev_inp = self.bn[ii](
+                            {'input': prev_inp, 'phase_train': phase_train})
 
                     if self.dropout_keep is not None:
                         if self.dropout_keep[ii] is not None:
