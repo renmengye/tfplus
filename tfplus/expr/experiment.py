@@ -19,6 +19,7 @@ from __future__ import division
 import os
 import sys
 
+from runner import SessionRunner, BasicRunner
 from tfplus.utils import cmd_args, Factory, OptionBase, Saver, logger
 from tfplus.utils import time_series_logger as ts_logger
 from tfplus.utils import plotter, listener, LogManager
@@ -130,9 +131,10 @@ class TrainExperiment(Experiment):
 
     def add_runner(self, runner):
         self.runners[runner.name] = runner
-        runner.set_session(self.session).set_model(
-            self.model).set_experiment(self)
-        if hasattr(runner, 'preprocessor'):
+        if isinstance(runner, SessionRunner):
+            runner.set_session(self.session).set_model(
+                self.model).set_experiment(self)
+        if isinstance(runner, BasicRunner):
             runner.set_preprocessor(self.preprocessor)
         return self
 

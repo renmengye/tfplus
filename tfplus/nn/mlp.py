@@ -1,12 +1,14 @@
 from graph_builder import GraphBuilder
 from batch_norm import BatchNorm
+
+import numpy as np
 import tensorflow as tf
 
 
 class MLP(GraphBuilder):
 
-    def __init__(self, dims, act, use_bn=None, add_bias=True, wd=None, scope='mlp', init_weights=None,
-                 frozen=None):
+    def __init__(self, dims, act, use_bn=None, add_bias=True, wd=None,
+                 scope='mlp', init_weights=None, init_stddev=0.01, frozen=None):
         """Add MLP. N = number of layers.
 
         Args:
@@ -24,6 +26,7 @@ class MLP(GraphBuilder):
         self.scope = scope
         self.init_weights = init_weights
         self.frozen = frozen
+        self.init_stddev = init_stddev
         if use_bn is None:
             self.use_bn = [False] * self.nlayers
             self.bn = [None] * self.nlayers
@@ -65,11 +68,23 @@ class MLP(GraphBuilder):
                     if self.use_bn[ii]:
                         self.bn[ii] = BatchNorm(nin, [0], decay=0.999)
 
+                    if self.init_stddev is None:
+                        self.log.info('Using Xavier initialization')
+                        std = 1 / np.sqrt(nin)
+                        self.log.info('Std: {:.4f}'.format(std))
+                        self.log.info('Uniform')
+                        dist = 'uniform'
+                    else:
+                        self.log.info('Using standard initialization')
+                        std = self.init_stddev
+                        self.log.info('Std: {:.4f}'.format(std))
+                        self.log.info('Gaussian')
+                        dist = 'normal'
                     self.w[ii] = self.declare_var(
                         [nin, nout],
                         init_val=init_val_w, wd=wd,
                         name='w',
-                        trainable=trainable)
+                        trainable=trainable, stddev=std, dist=dist)
                     self.log.info('Weights: {} Trainable: {}'.format(
                         [nin, nout], trainable))
                     if self.add_bias:
