@@ -42,7 +42,7 @@ tfplus.utils.LogManager(logs_folder).register('raw', 'plain', 'Raw Logs')
 results_folder = os.path.join(opt['results'], uid)
 
 # Initialize session.
-sess = tf.Session()
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 tf.set_random_seed(1234)
 
 # Initialize model.
