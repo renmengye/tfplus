@@ -70,7 +70,7 @@ else:
 data = {}
 for split in ['train', 'valid']:
     data[split] = tfplus.data.create_from_main(
-        'imagenet', split=split, mode=split)
+        'imagenet', split=split, mode=split, num_replica=opt['num_replica'])
 
 
 def get_data(split, batch_size=opt['batch_size'], cycle=True, shuffle=True,
