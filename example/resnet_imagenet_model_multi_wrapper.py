@@ -45,7 +45,8 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         for ii in xrange(self.num_replica):
             with tf.name_scope('%s_%d' % ('replica', ii)) as scope:
                 tf.get_variable_scope().reuse_variables()
-                inp_ = {'x': x_split[ii], 'y_gt': y_gt_split[ii]}
+                inp_ = {'x': x_split[ii], 'y_gt': y_gt_split[ii],
+                        'phase_train': inp['phase_train']}
                 output.append(self.sub_models[ii].build(inp_))
                 inp_list.append(inp_)
         self.input_list = inp_list
