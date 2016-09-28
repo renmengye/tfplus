@@ -97,6 +97,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         y_out = self.res_net({'x': x, 'phase_train': phase_train})
         self.register_var('y_out', y_out)
         score_out = tf.log(y_out)
+        self.log.fatal(score_out.device)
         self.register_var('score_out', score_out)
         return {
             'y_out': y_out
