@@ -1,4 +1,6 @@
 from __future__ import division
+import sys
+sys.path.insert(0, '/pkgs/tensorflow-gpu-0.9.0')
 
 import tfplus
 import os
