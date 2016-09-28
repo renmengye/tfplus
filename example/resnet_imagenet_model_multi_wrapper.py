@@ -10,7 +10,6 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
 
     def __init__(self, num_replica=2, name='resnet_imagenet_multi_wrapper'):
         super(ResNetImageNetModelMultiWrapper, self).__init__(name=name)
-        self.register_option('num_replica')
         self.register_option('learn_rate')
         self.register_option('learn_rate_decay')
         self.register_option('steps_per_lr_decay')
