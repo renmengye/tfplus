@@ -219,7 +219,7 @@ if __name__ == '__main__':
     print labels.max()
     print labels.min()
     print len(labels)
-    img_ids = ImageNetDataProvider(split='valid' folder='/ais/gobi4/mren/data/imagenet').img_ids
+    img_ids = ImageNetDataProvider(split='valid', folder='/ais/gobi4/mren/data/imagenet').img_ids
     print img_ids[0]
     print img_ids[-1]
     img_ids = ImageNetDataProvider(
