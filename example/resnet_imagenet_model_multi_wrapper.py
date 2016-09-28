@@ -13,6 +13,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         self.register_option('learn_rate')
         self.register_option('learn_rate_decay')
         self.register_option('steps_per_lr_decay')
+        self.register_option('inp_depth')
         self.num_replica = num_replica
         for ii in xrange(num_replica):
             model = tfplus.nn.model.create_from_main(
