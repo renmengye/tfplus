@@ -47,7 +47,7 @@ class GraphBuilder(object):
             name: variable name.
         """
         return self._var_dict[name]
-        
+
     def declare_var(self, shape, initializer=None, init_val=None, wd=None,
                     name=None, trainable=True, stddev=0.01, dist='normal'):
         """Initialize weights.
@@ -60,7 +60,8 @@ class GraphBuilder(object):
             if stddev > 0:
                 if dist == 'normal':
                     self.log.info('Truncated normal initialization')
-                    initializer = tf.truncated_normal_initializer(stddev=stddev)
+                    initializer = tf.truncated_normal_initializer(
+                        stddev=stddev)
                 elif dist == 'uniform':
                     self.log.info('Uniform initialization')
                     initializer = tf.random_uniform_initializer(
@@ -71,9 +72,11 @@ class GraphBuilder(object):
                 initializer = tf.constant_initializer(0.0)
         if init_val is None:
             var = tf.Variable(
-                initializer(shape), name=name, trainable=trainable, dtype='float')
+                initializer(shape), name=name, trainable=trainable,
+                dtype='float')
         else:
-            var = tf.Variable(init_val, name=name, trainable=trainable, dtype='float')
+            var = tf.Variable(init_val, name=name, trainable=trainable,
+                              dtype='float')
         if wd is not None:
             weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
             tf.add_to_collection('losses', weight_decay)

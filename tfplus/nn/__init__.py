@@ -8,4 +8,5 @@ from mlp import MLP
 from lstm import LSTM
 from conv_lstm import ConvLSTM
 from batch_norm import BatchNorm
+from new_batch_norm import NewBatchNorm
 from rnd_trans import ImageRandomTransform

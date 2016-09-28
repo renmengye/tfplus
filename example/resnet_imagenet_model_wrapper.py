@@ -12,12 +12,13 @@ tfplus.cmd_args.add('channels', 'list<int>', [256, 256, 512, 1024, 2048])
 tfplus.cmd_args.add('compatible', 'bool', False)
 tfplus.cmd_args.add('subtract_mean', 'bool', False)
 tfplus.cmd_args.add('shortcut', 'str', 'projection')
-tfplus.cmd_args.add('learn_rate', 'float', 0.01)
+tfplus.cmd_args.add('learn_rate', 'float', 0.1)
 tfplus.cmd_args.add('learn_rate_decay', 'float', 0.1)
 tfplus.cmd_args.add('steps_per_lr_decay', 'int', 160000)
 tfplus.cmd_args.add('momentum', 'float', 0.9)
 tfplus.cmd_args.add('optimizer', 'str', 'momentum')
 tfplus.cmd_args.add('wd', 'float', 1e-4)
+tfplus.cmd_args.add('new_bn', 'bool', False)
 
 
 class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
@@ -38,6 +39,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         self.register_option('momentum')
         self.register_option('optimizer')
         self.register_option('wd')
+        self.register_option('new_bn')
         self.res_net = ResNetImageNetModel()
         self.add_sub_model(self.res_net)
         pass
@@ -51,6 +53,8 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         inp_depth = self.get_option('inp_depth')
         x = self.add_input_var(
             'x', [None, None, None, inp_depth], 'float')
+        orig_x = (x + self.res_net._img_mean) / 255.0
+        self.register_var('orig_x', orig_x)
         y_gt = self.add_input_var('y_gt', [None, NUM_CLS], 'float')
         phase_train = self.add_input_var('phase_train', None, 'bool')
         return {
@@ -70,6 +74,7 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         shortcut = self.get_option('shortcut')
         wd = self.get_option('wd')
         phase_train = self.get_input_var('phase_train')
+        new_bn = self.get_option('new_bn')
         self.res_net.set_all_options({
             'inp_depth': inp_depth,
             'layers': layers,
@@ -79,7 +84,8 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
             'subtract_mean': subtract_mean,
             'shortcut': shortcut,
             'compatible': compatible,
-            'weight_decay': wd
+            'weight_decay': wd,
+            'new_bn': new_bn
         })
         pass
 
@@ -91,6 +97,8 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         self.register_var('x_trans', x)
         y_out = self.res_net({'x': x, 'phase_train': phase_train})
         self.register_var('y_out', y_out)
+        score_out = tf.log(y_out)
+        self.register_var('score_out', score_out)
         return {
             'y_out': y_out
         }

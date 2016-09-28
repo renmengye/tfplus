@@ -2,6 +2,7 @@ from __future__ import division
 
 from graph_builder import GraphBuilder
 from batch_norm import BatchNorm
+from new_batch_norm import NewBatchNorm
 from ops import Conv2D, DilatedConv2D, MaxPool, AvgPool
 
 import numpy as np
@@ -33,7 +34,8 @@ class ResNetSBN(GraphBuilder):
     def __init__(self, layers, channels, strides, bottleneck=False,
                  dilation=False, wd=None, scope='res_net',
                  shortcut='projection', initialization='msra',
-                 compatible=False, trainable=True, last_num_trainable=-1):
+                 compatible=False, trainable=True, last_num_trainable=-1,
+                 new_bn=False):
         super(ResNetSBN, self).__init__()
         self.channels = channels
         self.layers = layers
@@ -62,6 +64,11 @@ class ResNetSBN(GraphBuilder):
             self.compute_std = lambda s: 0.01
         pass
         self.copies = []
+        if new_bn:
+            self.bn_cls = NewBatchNorm
+            self.log.info('Using new batch norm')
+        else:
+            self.bn_cls = BatchNorm
         pass
 
     def compute_in_out(self, kk, ch_in, ch_out):
@@ -87,7 +94,8 @@ class ResNetSBN(GraphBuilder):
             ch_out_ = ch_out
         return f_, ch_in_, ch_out_
 
-    def apply_shortcut(self, prev_inp, ch_in, ch_out, phase_train=None, w=None, bn=None, stride=None):
+    def apply_shortcut(self, prev_inp, ch_in, ch_out, phase_train=None, w=None,
+                       bn=None, stride=None):
         if self.shortcut == 'projection':
             if self.dilation:
                 prev_inp = DilatedConv2D(w, rate=stride)(prev_inp)
@@ -148,7 +156,7 @@ class ResNetSBN(GraphBuilder):
                                             [1, 1, ch_in, ch_out]),
                                         trainable=_trainable
                                     )
-                                    self.shortcut_bn[ii] = BatchNorm(
+                                    self.shortcut_bn[ii] = self.bn_cls(
                                         ch_out, trainable=_trainable)
                                 pass
                             pass
@@ -168,7 +176,7 @@ class ResNetSBN(GraphBuilder):
                                         bn_ch = ch_out_
                                     else:
                                         bn_ch = ch_in_
-                                    self.bn[ii][jj][kk] = BatchNorm(
+                                    self.bn[ii][jj][kk] = self.bn_cls(
                                         bn_ch, trainable=_trainable)
                                     self.log.info('Init SD: {}'.format(
                                         self.compute_std(

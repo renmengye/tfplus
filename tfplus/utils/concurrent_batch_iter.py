@@ -90,19 +90,20 @@ class ConcurrentBatchIterator(IBatchIterator):
         for ff in self.fetchers:
             if not ff.is_alive():
                 dead.append(ff)
-                self.log.info('Found one dead thread.')
+                self.log.info('Found one dead thread.', verbose=2)
                 if self.relaunch:
-                    self.log.info('Relaunch')
+                    self.log.info('Relaunch', verbose=2)
                     fnew = BatchProducer(self.q, self.batch_iter)
                     fnew.start()
                     self.fetchers.append(fnew)
             else:
                 num_alive += 1
         if do_print:
-            self.log.info('Number of alive threads: {}'.format(num_alive))
+            self.log.info('Number of alive threads: {}'.format(num_alive),
+                          verbose=2)
             s = self.q.qsize()
             if s > self.max_queue_size / 3:
-                self.log.info('Data queue size: {}'.format(s))
+                self.log.info('Data queue size: {}'.format(s), verbose=2)
             else:
                 self.log.warning('Data queue size: {}'.format(s))
         for dd in dead:
@@ -117,7 +118,7 @@ class ConcurrentBatchIterator(IBatchIterator):
         self.q.task_done()
         self.counter += 1
         while batch is None:
-            self.log.info('Got an empty batch. Ending iteration.')
+            self.log.info('Got an empty batch. Ending iteration.', verbose=2)
             self.relaunch = False
             try:
                 batch = self.q.get(False)
@@ -128,7 +129,8 @@ class ConcurrentBatchIterator(IBatchIterator):
                 pass
 
             if qempty:
-                self.log.info('Queue empty. Scanning for alive thread.')
+                self.log.info('Queue empty. Scanning for alive thread.',
+                              verbose=2)
                 # Scan for alive thread.
                 found_alive = False
                 for ff in self.fetchers:
@@ -136,31 +138,31 @@ class ConcurrentBatchIterator(IBatchIterator):
                         found_alive = True
                         break
 
-                self.log.info('No alive thread found. Joining.')
+                self.log.info('No alive thread found. Joining.', verbose=2)
                 # If no alive thread, join all.
                 if not found_alive:
                     for ff in self.fetchers:
                         ff.join()
                     raise StopIteration
             else:
-                self.log.info('Got another batch from the queue.')
+                self.log.info('Got another batch from the queue.', verbose=2)
         return batch
 
     def reset(self):
-        self.log.info('Resetting concurrent batch iter')
-        self.log.info('Stopping all workers')
+        self.log.info('Resetting concurrent batch iter', verbose=2)
+        self.log.info('Stopping all workers', verbose=2)
         for f in self.fetchers:
             f.stop()
-        self.log.info('Cleaning queue')
+        self.log.info('Cleaning queue', verbose=2)
         cleaner = BatchConsumer(self.q)
         cleaner.start()
         for f in self.fetchers:
             f.join()
         self.q.join()
         cleaner.stop()
-        self.log.info('Resetting index')
+        self.log.info('Resetting index', verbose=2)
         self.batch_iter.reset()
-        self.log.info('Restarting workers')
+        self.log.info('Restarting workers', verbose=2)
         self.fetchers = []
         self.init_fetchers()
         self.relaunch = True
