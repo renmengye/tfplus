@@ -32,6 +32,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         for ii in xrange(self.num_replica):
             with tf.name_scope('%s_%d' % ('replica', ii)) as scope:
                 device = '/gpu:{}'.format(ii)
+                self.log.error(device)
                 with tf.device(device):
                     x_ = self.add_input_var('x_{}'.format(
                         ii), [None, None, None, inp_depth], 'float')
