@@ -170,7 +170,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         if self._has_built_all:
             raise Exception('Only call build_all or build_eval once.')
         self._has_built_all = True
-        with tf.device('/cpu:0'):
+        with tf.device(self.device):
             with tf.variable_scope(self.name):
                 inp_var = self.build_input()
                 output_var = self.build(inp_var)

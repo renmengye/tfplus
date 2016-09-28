@@ -80,7 +80,8 @@ class GraphBuilder(object):
                 initializer = tf.constant_initializer(0.0)
         if init_val is None:
             if self.variable_sharing:
-                with tf.device('/cpu:0'):
+                with tf.device('/gpu:0'):
+                # with tf.device('/cpu:0'):
                     var = tf.get_variable(name, shape, initializer=initializer)
             else:
                 var = tf.Variable(
@@ -88,7 +89,8 @@ class GraphBuilder(object):
                     dtype='float')
         else:
             if self.variable_sharing:
-                with tf.device('/cpu:0'):
+                with tf.device('/gpu:0'):
+                # with tf.device('/cpu:0'):
                     var = tf.get_variable(
                         name, shape,
                         initializer=tf.constant_initializer(init_val))
