@@ -154,7 +154,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             img_, rnd_package = self._rnd_proc.process(img_, rnd=rnd)
 
             rid = self.get_replica(kk, len(idx))
-            num_r = self.get_replica_size(rid, batch_size)
+            num_r = self.get_replica_size(rid, len(idx))
             if len(img) <= rid:
                 img.append(np.zeros(
                     [num_r, img_.shape[0], img_.shape[1], img_.shape[2]],
