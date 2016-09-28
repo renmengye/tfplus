@@ -79,7 +79,6 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
             grads = self.opt.compute_gradients(loss)
             self.add_loss(loss)
             tower_grads.append(grads)
-        total_loss = tf.add_n(total_loss)
         self.tower_grads = tower_grads
         total_loss = self.get_loss()
         self.register_var('loss', total_loss)
