@@ -126,7 +126,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         learn_rate = self.learn_rate
         # We must calculate the mean of each gradient. Note that this is the
         # synchronization point across all towers.
-        grads = average_gradients(self.tower_grads)
+        grads = self.average_gradients(self.tower_grads)
         # Apply the gradients to adjust the shared variables.
         apply_gradient_op = self.opt.apply_gradients(
             grads, global_step=global_step)
