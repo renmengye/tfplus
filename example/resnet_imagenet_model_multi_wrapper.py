@@ -51,7 +51,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                 inp_list.append(inp_)
         self.input_list = inp_list
         self.output_list = output
-        output = tf.concat(0, output['y_out'])
+        output = tf.concat(0, [oo['y_out'] for oo in output])
         self.register_var('y_out', output)
         output2 = tf.concat(0, [mm.get_var('score_out')
                                 for mm in self.sub_models])
