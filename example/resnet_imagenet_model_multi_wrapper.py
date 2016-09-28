@@ -68,8 +68,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                         'y_gt': inp['y_gt_{}'.format(ii)],
                         'phase_train': inp['phase_train']
                     }
-                    output.append(self.sub_models[
-                                  ii].build(self.input_list[ii]))
+                    output.append(self.sub_models[ii].build(inp_))
                     inp_list.append(inp_)
         self.output_list = output
         self.input_list = inp_list
