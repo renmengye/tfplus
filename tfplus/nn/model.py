@@ -377,6 +377,10 @@ class Model(GraphBuilder, OptionBase):
         my_var_list = self.get_all_vars()
         sess.run(tf.initialize_variables(my_var_list))
         return self
+    
+    @property
+    def var_dict(self):
+        return self._var_dict
 
     def get_all_vars(self):
         var_list = tf.all_variables()
