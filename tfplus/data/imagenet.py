@@ -224,6 +224,8 @@ if __name__ == '__main__':
         split='valid', folder='/ais/gobi4/mren/data/imagenet').img_ids
     print img_ids[0]
     print img_ids[-1]
-    print ImageNetDataProvider(
+    batch = ImageNetDataProvider(
         split='valid', folder='/ais/gobi4/mren/data/imagenet',
         num_replica=2).get_batch_idx(np.arange(5))
+    for key in batch:
+        print key, batch[key].shape
