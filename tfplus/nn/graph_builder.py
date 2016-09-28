@@ -49,7 +49,7 @@ class GraphBuilder(object):
         return self._var_dict[name]
         
     def declare_var(self, shape, initializer=None, init_val=None, wd=None,
-                    name=None, trainable=True, stddev=0.01):
+                    name=None, trainable=True, stddev=0.01, dist='normal'):
         """Initialize weights.
 
         Args:
@@ -58,7 +58,15 @@ class GraphBuilder(object):
         """
         if initializer is None:
             if stddev > 0:
-                initializer = tf.truncated_normal_initializer(stddev=stddev)
+                if dist == 'normal':
+                    self.log.info('Truncated normal initialization')
+                    initializer = tf.truncated_normal_initializer(stddev=stddev)
+                elif dist == 'uniform':
+                    self.log.info('Uniform initialization')
+                    initializer = tf.random_uniform_initializer(
+                        minval=-stddev, maxval=stddev)
+                else:
+                    raise Exception('Unknown distribution "{}"'.format(dist))
             else:
                 initializer = tf.constant_initializer(0.0)
         if init_val is None:

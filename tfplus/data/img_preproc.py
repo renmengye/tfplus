@@ -57,6 +57,12 @@ class ImagePreprocessor(object):
     def rnd_resize(self):
         return self._rnd_resize
 
+    def set_rnd_resize(self, value):
+        if len(value) == 2:
+            value = [value[0], value[0],
+                     value[1], value[1]]
+        self._rnd_resize = value
+
     @property
     def random(self):
         return self._random
@@ -121,7 +127,7 @@ class ImagePreprocessor(object):
             pad = [0, 0]
         elif self.resize_base == 'long':
             # For now, just centre padding...
-            if width < height:
+            if w < h:
                 siz2 = (int(w / h * new_h / 2) * 2, new_h)
                 ratio = [new_h / h, new_h / h]
                 pad = [int((new_w - siz2[0]) / 2), 0]
@@ -181,7 +187,7 @@ class ImagePreprocessor(object):
                 'hflip': hflip
             }
 
-    def process(self, image, rnd=True, rnd_package=None, div_255=True):
+    def process(self, image, rnd=True, rnd_package=None, div_255=True, rnd_hflip_inner=True):
         """Process the images.
 
         redraw: Whether to redraw random numbers used for random cropping, and
@@ -203,8 +209,11 @@ class ImagePreprocessor(object):
         pad = rnd_package['pad']
         hflip = rnd_package['hflip']
         offset = rnd_package['offset']
+        hflip = hflip and rnd_hflip_inner
+        rnd_package['hflip'] = hflip
 
-        image = cv2.resize(image, resize, interpolation=cv2.INTER_CUBIC)
+        image = cv2.resize(image, (resize[0], resize[1]),
+                           interpolation=cv2.INTER_CUBIC)
 
         if pad[0] > 0 or pad[1] > 0:
             image = np.pad(image, [[pad[1], pad[1]], [pad[0], pad[0]], [0, 0]],

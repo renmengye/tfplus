@@ -13,6 +13,7 @@ class BatchProducer(threading.Thread):
         threading.Thread.__init__(self)
         self.q = q
         self.batch_iter = batch_iter
+        self.log = tfplus.utils.logger.get()
         self._stop = threading.Event()
 
     def stop(self):
@@ -24,7 +25,8 @@ class BatchProducer(threading.Thread):
     def run(self):
         while not self.stopped():
             try:
-                self.q.put(self.batch_iter.next())
+                b = self.batch_iter.next()
+                self.q.put(b)
             except StopIteration:
                 self.q.put(None)
                 break
@@ -58,7 +60,7 @@ class BatchConsumer(threading.Thread):
 
 class ConcurrentBatchIterator(IBatchIterator):
 
-    def __init__(self, batch_iter, max_queue_size=10, num_threads=5):
+    def __init__(self, batch_iter, max_queue_size=10, num_threads=5, log_queue=20):
         """
         Data provider wrapper that supports concurrent data fetching.
         """
@@ -71,6 +73,8 @@ class ConcurrentBatchIterator(IBatchIterator):
         self.fetchers = []
         self.init_fetchers()
         self.counter = 0
+        self.relaunch = True
+        self.log_queue = log_queue
         pass
 
     def init_fetchers(self):
@@ -86,10 +90,12 @@ class ConcurrentBatchIterator(IBatchIterator):
         for ff in self.fetchers:
             if not ff.is_alive():
                 dead.append(ff)
-                self.log.info('Found one dead thread. Relaunching.')
-                fnew = BatchProducer(self.q, self.batch_iter)
-                fnew.start()
-                self.fetchers.append(fnew)
+                self.log.info('Found one dead thread.')
+                if self.relaunch:
+                    self.log.info('Relaunch')
+                    fnew = BatchProducer(self.q, self.batch_iter)
+                    fnew.start()
+                    self.fetchers.append(fnew)
             else:
                 num_alive += 1
         if do_print:
@@ -104,14 +110,40 @@ class ConcurrentBatchIterator(IBatchIterator):
         pass
 
     def next(self):
-        self.scan(do_print=(self.counter % 20 == 0))
-        if self.counter % 20 == 0:
+        self.scan(do_print=(self.counter % self.log_queue == 0))
+        if self.counter % self.log_queue == 0:
             self.counter = 0
         batch = self.q.get()
         self.q.task_done()
         self.counter += 1
-        if batch is None:
-            raise StopIteration
+        while batch is None:
+            self.log.info('Got an empty batch. Ending iteration.')
+            self.relaunch = False
+            try:
+                batch = self.q.get(False)
+                self.q.task_done()
+                qempty = False
+            except Queue.Empty:
+                qempty = True
+                pass
+
+            if qempty:
+                self.log.info('Queue empty. Scanning for alive thread.')
+                # Scan for alive thread.
+                found_alive = False
+                for ff in self.fetchers:
+                    if ff.is_alive():
+                        found_alive = True
+                        break
+
+                self.log.info('No alive thread found. Joining.')
+                # If no alive thread, join all.
+                if not found_alive:
+                    for ff in self.fetchers:
+                        ff.join()
+                    raise StopIteration
+            else:
+                self.log.info('Got another batch from the queue.')
         return batch
 
     def reset(self):
@@ -131,5 +163,14 @@ class ConcurrentBatchIterator(IBatchIterator):
         self.log.info('Restarting workers')
         self.fetchers = []
         self.init_fetchers()
+        self.relaunch = True
         pass
     pass
+
+if __name__ == '__main__':
+    from batch_iter import BatchIterator
+    b = BatchIterator(100, batch_size=6, get_fn=None)
+    cb = ConcurrentBatchIterator(b, max_queue_size=5, num_threads=3)
+    for _batch in cb:
+        log = tfplus.utils.logger.get()
+        log.info(('Final out', _batch))

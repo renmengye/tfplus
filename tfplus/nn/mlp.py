@@ -1,19 +1,19 @@
 from graph_builder import GraphBuilder
+from batch_norm import BatchNorm
 
+import numpy as np
 import tensorflow as tf
 
 
 class MLP(GraphBuilder):
 
-    def __init__(self, dims, act, add_bias=True, dropout_keep=None,
-                 wd=None, scope='mlp', init_weights=None,
-                 frozen=None):
+    def __init__(self, dims, act, use_bn=None, add_bias=True, wd=None,
+                 scope='mlp', init_weights=None, init_stddev=0.01, frozen=None):
         """Add MLP. N = number of layers.
 
         Args:
             dims: layer-wise dimensions, list of N int
             act: activation function, list of N function
-            dropout_keep: keep prob of dropout, list of N float
             wd: weight decay
         """
         self.nlayers = len(dims) - 1
@@ -22,22 +22,28 @@ class MLP(GraphBuilder):
         self.dims = dims
         self.act = act
         self.add_bias = add_bias
-        self.dropout_keep = dropout_keep
         self.wd = wd
         self.scope = scope
         self.init_weights = init_weights
         self.frozen = frozen
+        self.init_stddev = init_stddev
+        if use_bn is None:
+            self.use_bn = [False] * self.nlayers
+            self.bn = [None] * self.nlayers
+        else:
+            self.use_bn = use_bn
+            self.bn = [None] * self.nlayers
 
         super(MLP, self).__init__()
 
         self.log.info('MLP: {}'.format(scope))
         self.log.info('Dimensions: {}'.format(dims))
         self.log.info('Activation: {}'.format(act))
-        self.log.info('Dropout: {}'.format(dropout_keep))
         self.log.info('Add bias: {}'.format(add_bias))
         pass
 
     def init_var(self):
+        self._has_init_var = True
         dims = self.dims
         wd = self.wd
         with tf.variable_scope(self.scope):
@@ -59,11 +65,26 @@ class MLP(GraphBuilder):
                     else:
                         trainable = True
 
+                    if self.use_bn[ii]:
+                        self.bn[ii] = BatchNorm(nin, [0], decay=0.999)
+
+                    if self.init_stddev is None:
+                        self.log.info('Using Xavier initialization')
+                        std = 1 / np.sqrt(nin)
+                        self.log.info('Std: {:.4f}'.format(std))
+                        self.log.info('Uniform')
+                        dist = 'uniform'
+                    else:
+                        self.log.info('Using standard initialization')
+                        std = self.init_stddev
+                        self.log.info('Std: {:.4f}'.format(std))
+                        self.log.info('Gaussian')
+                        dist = 'normal'
                     self.w[ii] = self.declare_var(
                         [nin, nout],
                         init_val=init_val_w, wd=wd,
                         name='w',
-                        trainable=trainable)
+                        trainable=trainable, stddev=std, dist=dist)
                     self.log.info('Weights: {} Trainable: {}'.format(
                         [nin, nout], trainable))
                     if self.add_bias:
@@ -83,6 +104,8 @@ class MLP(GraphBuilder):
         self.lazy_init_var()
         x = inp['input']
         phase_train = inp['phase_train']
+        if 'dropout_keep' in inp:
+            dropout_keep = inp['dropout_keep']
         h = [None] * self.nlayers
         with tf.variable_scope(self.scope):
             for ii in xrange(self.nlayers):
@@ -92,10 +115,14 @@ class MLP(GraphBuilder):
                     else:
                         prev_inp = h[ii - 1]
 
-                    if self.dropout_keep is not None:
-                        if self.dropout_keep[ii] is not None:
-                            prev_inp = nn.Dropout(self.dropout_keep[ii],
-                                                  phase_train)(prev_inp)
+                    if self.use_bn[ii]:
+                        prev_inp = self.bn[ii](
+                            {'input': prev_inp, 'phase_train': phase_train})
+
+                    if dropout_keep is not None:
+                        if dropout_keep[ii] is not None:
+                            prev_inp = tf.nn.dropout(prev_inp,
+                                                     dropout_keep[ii])
 
                     h[ii] = tf.matmul(prev_inp, self.w[ii])
 
@@ -116,7 +143,11 @@ class MLP(GraphBuilder):
         for ii in xrange(self.nlayers):
             prefix = 'layer_{}/'.format(ii)
             results[prefix + 'w'] = self.w[ii]
-            results[prefix + 'b'] = self.b[ii]
+            if self.add_bias:
+                results[prefix + 'b'] = self.b[ii]
+            if self.bn[ii] is not None:
+                self.add_prefix_to(
+                    prefix + 'bn', self.bn[ii].get_save_var_dict(), results)
             pass
         return results
     pass
