@@ -149,7 +149,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
 
         for m in self.sub_models:
             self.log.info(m.device)
-        self.log.fatal('haha')
+        # self.log.fatal('haha')
         return train_op
 
     def restore_weights_from(self):
