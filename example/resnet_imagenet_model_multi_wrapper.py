@@ -28,6 +28,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         results = {}
         phase_train = self.add_input_var('phase_train', None, 'bool')
         results['phase_train'] = phase_train
+        inp_depth = self.get_option('inp_depth')
         for ii in xrange(self.num_replica):
             with tf.name_scope('%s_%d' % ('replica', ii)) as scope:
                 device = '/gpu:{}'.format(ii)
