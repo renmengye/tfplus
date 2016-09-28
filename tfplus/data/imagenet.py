@@ -166,8 +166,8 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             counter += 1
         if self.num_replica == 1:
             results = {
-                'x': img,
-                'y_gt': y_gt
+                'x': img[0],
+                'y_gt': y_gt[0]
             }
         else:
             results = {}
