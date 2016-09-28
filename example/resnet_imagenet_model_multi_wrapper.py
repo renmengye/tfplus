@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tfplus
-
+from tfplus.nn import Model
 from resnet_imagenet_model_wrapper import ResNetImageNetModelWrapper
 
 NUM_CLS = 1000
