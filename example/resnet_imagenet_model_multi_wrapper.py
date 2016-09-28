@@ -39,6 +39,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                     y_gt_ = self.add_input_var('y_gt_{}'.format(ii), [
                                                None, NUM_CLS], 'float')
                     results['y_gt_{}'.format(ii)] = y_gt_
+                    self.log.fatal(x_.device)
         return results
 
     def init_var(self):
