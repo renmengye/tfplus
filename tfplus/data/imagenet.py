@@ -49,7 +49,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
 
     @property
     def num_replica(self):
-        return _num_replica
+        return self._num_replica
 
     @property
     def folder(self):
