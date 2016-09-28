@@ -73,7 +73,6 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         subtract_mean = self.get_option('subtract_mean')
         shortcut = self.get_option('shortcut')
         wd = self.get_option('wd')
-        phase_train = self.get_input_var('phase_train')
         new_bn = self.get_option('new_bn')
         self.res_net.set_all_options({
             'inp_depth': inp_depth,
