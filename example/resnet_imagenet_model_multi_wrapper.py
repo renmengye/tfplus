@@ -16,7 +16,6 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         self.register_option('inp_depth')
         self.num_replica = num_replica
         self.set_variable_sharing(True)
-        self.log.fatal(num_replica)
         for ii in xrange(num_replica):
             model = tfplus.nn.model.create_from_main(
                 'resnet_imagenet_wrapper').set_gpu(ii)
@@ -43,6 +42,8 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                     results['y_gt_{}'.format(ii)] = y_gt_
                     orig_x.append(
                         (x_ + self.sub_models[0].res_net._img_mean) / 255.0)
+                    self.log.error(x_.device)
+        self.log.fatal('')
         self.register_var('orig_x', tf.concat(0, orig_x))
         return results
 
