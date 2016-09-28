@@ -1,3 +1,5 @@
+from __future__ import division
+
 import tfplus
 import os
 import numpy as np
@@ -16,7 +18,7 @@ tfplus.cmd_args.add('imagenet:dataset_folder', 'str',
 
 class ImageNetDataProvider(tfplus.data.DataProvider):
 
-    def __init__(self, split='train', folder=None, mode='train'):
+    def __init__(self, split='train', folder=None, mode='train', num_replica=1):
         """
         Mode: train or valid or test
         Train: Random scale, random crop
@@ -40,7 +42,12 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
             [103.062623801, 115.902882574, 123.151630838], dtype='float32')
         self._mutex = threading.Lock()
         self.register_option('imagenet:dataset_folder')
+        self._num_replica = num_replica
         pass
+
+    @property
+    def num_replica(self):
+        return _num_replica
 
     @property
     def folder(self):
@@ -122,16 +129,19 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
     def get_size(self):
         return len(self.img_ids)
 
+    def get_replica(self, kk, batch_size):
+        num_ex_per_rep = int(np.ceil(batch_size / self.num_replica))
+        return int(np.floor(kk / num_ex_per_rep))
+
+    def get_replica_size(self, ii, batch_size):
+        num_ex_per_rep = int(np.ceil(batch_size / self.num_replica))
+        return min((ii + 1) * num_ex_per_rep, batch_size) - (ii) * num_ex_per_rep
+
     def get_batch_idx(self, idx, **kwargs):
         start_time = time.time()
-        img = None
-        # label = np.zeros([len(idx)], dtype='int32')
-        y_gt = np.zeros([len(idx), 1000], dtype='float32')
+        img = []
+        y_gt = []
         for kk, ii in enumerate(idx):
-            # if self.split == 'train':
-            #     folder = os.path.join('train', self.img_ids[ii].split('_')[0])
-            # else:
-            #     folder = self.split
             label_name = synset.get_label(self.labels[ii])
             img_fname = os.path.join(self.folder, self.split, label_name,
                                      self.img_ids[ii])
@@ -140,13 +150,17 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
                 raise Exception('Cannot read "{}"'.format(img_fname))
             rnd = self._mode == 'train'
             img_, rnd_package = self._rnd_proc.process(img_, rnd=rnd)
-            if img is None:
-                img = np.zeros(
-                    [len(idx), img_.shape[0], img_.shape[1], img_.shape[2]],
-                    dtype='float32')
-            img[kk] = img_ * 255.0 - self.mean_img
-            # label[kk] = self.labels[ii]
-            y_gt[kk, self.labels[ii]] = 1.0
+
+            rid = get_replica(kk, len(idx))
+            num_r = get_replica_size(rid, batch_size)
+            if len(img) <= rid:
+                img.append(np.zeros(
+                    [num_r, img_.shape[0], img_.shape[1], img_.shape[2]],
+                    dtype='float32'))
+                counter = 0
+            img[rid][counter] = img_ * 255.0 - self.mean_img
+            y_gt[rid][counter, self.labels[ii]] = 1.0
+            counter += 1
         results = {
             'x': img,
             'y_gt': y_gt
@@ -198,3 +212,4 @@ if __name__ == '__main__':
     img_ids = ImageNetDataProvider(split='valid').img_ids
     print img_ids[0]
     print img_ids[-1]
+    img_ids = ImageNetDataProvider(split='valid', num_replica=2).get_batch_idx(np.arange(5))
