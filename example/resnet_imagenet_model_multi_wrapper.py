@@ -161,6 +161,19 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         # self.log.fatal('haha')
         return train_op
 
+    def build_all(self, param_avg=False):
+        """Build all nodes."""
+        if self._has_built_all:
+            raise Exception('Only call build_all or build_eval once.')
+        self._has_built_all = True
+        with tf.variable_scope(self.name):
+            inp_var = self.build_input()
+            output_var = self.build(inp_var)
+            loss_var = self.build_loss(inp_var, output_var)
+            train_step = self.build_optim(loss_var)
+            self.register_var('train_step', train_step)
+        return self
+
     def restore_weights_from(self):
         self.sub_models[0].restore_weights_from(sess, folder)
         return super(ContainerModel, self).restore_weights_from(sess, folder)
