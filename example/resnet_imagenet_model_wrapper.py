@@ -89,17 +89,16 @@ class ResNetImageNetModelWrapper(tfplus.nn.ContainerModel):
         pass
 
     def build(self, inp):
-        with tf.device('/gpu:0'):
-            self.lazy_init_var()
-            x = inp['x']
-            phase_train = inp['phase_train']
-            x = tf.identity(x)
-            self.register_var('x_trans', x)
-            y_out = self.res_net({'x': x, 'phase_train': phase_train})
-            self.register_var('y_out', y_out)
-            score_out = tf.log(y_out)
-            self.log.fatal(score_out.device)
-            self.register_var('score_out', score_out)
+        self.lazy_init_var()
+        x = inp['x']
+        phase_train = inp['phase_train']
+        x = tf.identity(x)
+        self.register_var('x_trans', x)
+        y_out = self.res_net({'x': x, 'phase_train': phase_train})
+        self.register_var('y_out', y_out)
+        score_out = tf.log(y_out)
+        self.log.fatal(score_out.device)
+        self.register_var('score_out', score_out)
         return {
             'y_out': y_out
         }
