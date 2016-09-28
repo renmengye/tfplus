@@ -210,16 +210,20 @@ tfplus.data.data_provider.get_factory().register('imagenet',
 
 if __name__ == '__main__':
     # print len(ImageNetDataProvider().img_ids)
-    labels = ImageNetDataProvider(split='train', folder='/ais/gobi4/mren/data/imagenet').labels
+    labels = ImageNetDataProvider(
+        split='train', folder='/ais/gobi4/mren/data/imagenet').labels
     print labels.max()
     print labels.min()
     print len(labels)
-    labels = ImageNetDataProvider(split='valid', folder='/ais/gobi4/mren/data/imagenet').labels
+    labels = ImageNetDataProvider(
+        split='valid', folder='/ais/gobi4/mren/data/imagenet').labels
     print labels.max()
     print labels.min()
     print len(labels)
-    img_ids = ImageNetDataProvider(split='valid', folder='/ais/gobi4/mren/data/imagenet').img_ids
+    img_ids = ImageNetDataProvider(
+        split='valid', folder='/ais/gobi4/mren/data/imagenet').img_ids
     print img_ids[0]
     print img_ids[-1]
-    img_ids = ImageNetDataProvider(
-        split='valid', folder='/ais/gobi4/mren/data/imagenet', num_replica=2).get_batch_idx(np.arange(5))
+    print ImageNetDataProvider(
+        split='valid', folder='/ais/gobi4/mren/data/imagenet',
+        num_replica=2).get_batch_idx(np.arange(5))
