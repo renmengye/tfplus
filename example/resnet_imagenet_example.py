@@ -27,6 +27,7 @@ tfplus.cmd_args.add('restore_model', 'str', None)
 tfplus.cmd_args.add('restore_logs', 'str', None)
 tfplus.cmd_args.add('batch_size', 'int', 128)
 tfplus.cmd_args.add('num_replica', 'int', 1)
+tfplus.cmd_args.add('num_worker', 'int', 10)
 tfplus.cmd_args.add('prefetch', 'bool', False)
 opt = tfplus.cmd_args.make()
 
@@ -74,7 +75,8 @@ for split in ['train', 'valid']:
 
 def get_data(split, batch_size=opt['batch_size'], cycle=True, shuffle=True,
              max_queue_size=100,
-             num_threads=10, log_epoch=200, prefetch=opt['prefetch']):
+             num_threads=opt['num_worker'], log_epoch=200,
+             prefetch=opt['prefetch']):
     batch_iter = BatchIterator(
         num=data[split].get_size(), progress_bar=False, shuffle=shuffle,
         batch_size=batch_size, cycle=cycle,
