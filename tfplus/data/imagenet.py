@@ -157,14 +157,22 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
                 img.append(np.zeros(
                     [num_r, img_.shape[0], img_.shape[1], img_.shape[2]],
                     dtype='float32'))
+                y_gt.append(np.zeros(
+                    [num_r, 1000]), dtype='float32')
                 counter = 0
             img[rid][counter] = img_ * 255.0 - self.mean_img
             y_gt[rid][counter, self.labels[ii]] = 1.0
             counter += 1
-        results = {
-            'x': img,
-            'y_gt': y_gt
-        }
+        if self.num_replica == 1:
+            results = {
+                'x': img,
+                'y_gt': y_gt
+            }
+        else:
+            results = {}
+            for ii in xrange(self.num_replica):
+                results['x_{}'.format(ii)] = img[ii]
+                results['y_gt_{}'.format(ii)] = y_gt[ii]
         return results
 
     # def get_batch_idx(self, idx, **kwargs):
@@ -212,4 +220,5 @@ if __name__ == '__main__':
     img_ids = ImageNetDataProvider(split='valid').img_ids
     print img_ids[0]
     print img_ids[-1]
-    img_ids = ImageNetDataProvider(split='valid', num_replica=2).get_batch_idx(np.arange(5))
+    img_ids = ImageNetDataProvider(
+        split='valid', num_replica=2).get_batch_idx(np.arange(5))
