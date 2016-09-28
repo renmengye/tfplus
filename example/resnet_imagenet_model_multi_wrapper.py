@@ -9,7 +9,12 @@ tfplus.cmd_args.add('num_replica', 'int', 2)
 
 class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
 
-    def __init__(self, num_replica=2):
+    def __init__(self, name='resnet_imagenet_multi_wrapper'):
+        super(ResNetImageNetModelMultiWrapper, self).__init__(name=name)
+        self.register_option('num_replica')
+        self.register_option('learn_rate')
+        self.register_option('learn_rate_decay')
+        self.register_option('steps_per_lr_decay')
         self.num_replica = num_replica
         for ii in xrange(num_replica):
             model = tfplus.nn.model.create_from_main(
