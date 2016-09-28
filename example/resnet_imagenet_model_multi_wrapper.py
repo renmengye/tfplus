@@ -61,11 +61,13 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         inp_list = []
         for ii in xrange(self.num_replica):
             with tf.name_scope('%s_%d' % ('replica', ii)) as scope:
-                tf.get_variable_scope().reuse_variables()
-                inp_ = {'x': x_split[ii], 'y_gt': y_gt_split[ii],
-                        'phase_train': inp['phase_train']}
-                output.append(self.sub_models[ii].build(inp_))
-                inp_list.append(inp_)
+                device = '/gpu:{}'.format(ii)
+                with tf.device(device):
+                    tf.get_variable_scope().reuse_variables()
+                    inp_ = {'x': x_split[ii], 'y_gt': y_gt_split[ii],
+                            'phase_train': inp['phase_train']}
+                    output.append(self.sub_models[ii].build(inp_))
+                    inp_list.append(inp_)
         self.input_list = inp_list
         self.output_list = output
         output = tf.concat(0, [oo['y_out'] for oo in output])
@@ -78,8 +80,10 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
     def build_loss(self, inp, output):
         tower_grads = []
         for ii in xrange(self.num_replica):
-            loss = self.sub_models[ii].build_loss(
-                self.input_list[ii], self.output_list[ii])
+            device = '/gpu:{}'.format(ii)
+            with tf.device(device):
+                loss = self.sub_models[ii].build_loss(
+                    self.input_list[ii], self.output_list[ii])
             grads = self.opt.compute_gradients(loss)
             self.add_loss(loss)
             tower_grads.append(grads)
