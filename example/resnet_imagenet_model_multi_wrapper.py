@@ -35,11 +35,9 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                 with tf.device(device):
                     x_ = self.add_input_var('x_{}'.format(
                         ii), [None, None, None, inp_depth], 'float')
-                    self.register_var('x_{}'.format(ii), x_)
                     results['x_{}'.format(ii)] = x_
                     y_gt_ = self.add_input_var('y_gt_{}'.format(ii), [
                                                None, NUM_CLS], 'float')
-                    self.register_var('y_gt_{}'.format(ii), y_gt_)
                     results['y_gt_{}'.format(ii)] = y_gt_
         return results
 
