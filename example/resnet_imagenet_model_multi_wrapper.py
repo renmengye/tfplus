@@ -4,12 +4,11 @@ import tfplus
 from resnet_imagenet_model_wrapper import ResNetImageNetModelWrapper
 
 NUM_CLS = 1000
-tfplus.cmd_args.add('num_replica', 'int', 2)
 
 
 class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
 
-    def __init__(self, name='resnet_imagenet_multi_wrapper'):
+    def __init__(self, num_replica=2, name='resnet_imagenet_multi_wrapper'):
         super(ResNetImageNetModelMultiWrapper, self).__init__(name=name)
         self.register_option('num_replica')
         self.register_option('learn_rate')

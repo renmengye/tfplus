@@ -26,7 +26,7 @@ tfplus.cmd_args.add('localhost', 'str', 'http://localhost')
 tfplus.cmd_args.add('restore_model', 'str', None)
 tfplus.cmd_args.add('restore_logs', 'str', None)
 tfplus.cmd_args.add('batch_size', 'int', 128)
-tfplus.cmd_args.add('parallel', 'bool', False)
+tfplus.cmd_args.add('num_replica', 'int', 1)
 tfplus.cmd_args.add('prefetch', 'bool', False)
 opt = tfplus.cmd_args.make()
 
@@ -46,12 +46,13 @@ sess = tf.Session()
 tf.set_random_seed(1234)
 
 # Initialize model.
-if opt['parallel']:
-    model_name = 'resnet_imagenet_multi_wrapper'
+if opt['num_replica'] > 1:
+    model = tfplus.nn.model.create_from_main('resnet_imagenet_multi_wrapper',
+                                             num_replica=opt['num_replica'])
 else:
-    model_name = 'resnet_imagenet_wrapper'
+    model = tfplus.nn.model.create_from_main('resnet_imagenet_wrapper')
 model = (
-    tfplus.nn.model.create_from_main(model_name)
+    model
     .set_gpu(opt['gpu'])
     .set_folder(results_folder)
     .restore_options_from(opt['restore_model'])
