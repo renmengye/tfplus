@@ -64,9 +64,11 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                 device = '/gpu:{}'.format(ii)
                 with tf.device(device):
                     tf.get_variable_scope().reuse_variables()
-                    inp_ = {'x', inp['x_{}'.format(ii)],
-                            'y_gt': inp['y_gt_{}'.format(ii)],
-                            'phase_train': inp['phase_train']}
+                    inp_ = {
+                        'x': inp['x_{}'.format(ii)],
+                        'y_gt': inp['y_gt_{}'.format(ii)],
+                        'phase_train': inp['phase_train']
+                    }
                     output.append(self.sub_models[
                                   ii].build(self.input_list[ii]))
                     inp_list.append(inp_)
