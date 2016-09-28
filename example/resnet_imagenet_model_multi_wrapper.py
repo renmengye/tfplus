@@ -21,6 +21,9 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
                 'resnet_imagenet_wrapper').set_gpu(ii)
             self.add_sub_model(model)
 
+    def set_gpu(self, value):
+        return super(ContainerModel, self).set_gpu(value)
+
     def build_input(self):
         inp_depth = self.get_option('inp_depth')
         x = self.add_input_var(
