@@ -34,8 +34,21 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
             'phase_train': phase_train
         }
 
+    def init_var(self):
+        learn_rate = self.get_option('learn_rate')
+        lr_decay = self.get_option('learn_rate_decay')
+        steps_decay = self.get_option('steps_per_lr_decay')
+        learn_rate = tf.train.exponential_decay(
+            learn_rate, self.global_step, steps_decay, lr_decay,
+            staircase=True)
+        self.register_var('learn_rate', learn_rate)
+        self.opt = tf.train.MomentumOptimizer(learn_rate, momentum=0.9)
+        self.learn_rate = learn_rate
+        pass
+
     def build(self, inp):
         # Divide input equally.
+        self.lazy_init_var()
         x = inp['x']
         x_split = tf.split(0, self.num_replica, x)
         y_gt = inp['y_gt']
@@ -63,7 +76,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         for ii in xrange(self.num_replica):
             loss = self.sub_models[ii].build_loss(
                 self.input_list[ii], self.output_list[ii])
-            grads = opt.compute_gradients(loss)
+            grads = self.opt.compute_gradients(loss)
             self.add_loss(loss)
             tower_grads.append(grads)
         total_loss = tf.add_n(total_loss)
@@ -110,20 +123,14 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         return average_grads
 
     def build_optim(self, loss):
-        learn_rate = self.get_option('learn_rate')
-        lr_decay = self.get_option('learn_rate_decay')
-        steps_decay = self.get_option('steps_per_lr_decay')
-        learn_rate = tf.train.exponential_decay(
-            learn_rate, self.global_step, steps_decay, lr_decay,
-            staircase=True)
-        self.register_var('learn_rate', learn_rate)
         global_step = self.global_step
-        opt = tf.train.MomentumOptimizer(learn_rate, momentum=0.9)
+        learn_rate = self.learn_rate
         # We must calculate the mean of each gradient. Note that this is the
         # synchronization point across all towers.
         grads = average_gradients(self.tower_grads)
         # Apply the gradients to adjust the shared variables.
-        apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
+        apply_gradient_op = self.opt.apply_gradients(
+            grads, global_step=global_step)
 
         # Track the moving averages of all trainable variables.
         variable_averages = tf.train.ExponentialMovingAverage(
