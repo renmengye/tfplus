@@ -24,7 +24,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
         inp_depth = self.get_option('inp_depth')
         x = self.add_input_var(
             'x', [None, None, None, inp_depth], 'float')
-        orig_x = (x + self.sub_model[0].res_net._img_mean) / 255.0
+        orig_x = (x + self.sub_models[0].res_net._img_mean) / 255.0
         self.register_var('orig_x', orig_x)
         y_gt = self.add_input_var('y_gt', [None, NUM_CLS], 'float')
         phase_train = self.add_input_var('phase_train', None, 'bool')
