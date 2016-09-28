@@ -146,6 +146,10 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
 
         # Group all updates to into a single train op.
         train_op = tf.group(apply_gradient_op, variables_averages_op)
+
+        for m in self.sub_models:
+            self.log.info(m.device)
+        self.log.fatal('haha')
         return train_op
 
     def restore_weights_from(self):
