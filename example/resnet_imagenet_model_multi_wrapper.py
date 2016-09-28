@@ -101,7 +101,7 @@ class ResNetImageNetModelMultiWrapper(tfplus.nn.ContainerModel):
             # Note that each grad_and_vars looks like the following:
             #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
             grads = []
-            if grad_and_vars[0][0] is not None
+            if grad_and_vars[0][0] is not None:
                 for g, _ in grad_and_vars:
                     # Add 0 dimension to the gradients to represent the tower.
                     expanded_g = tf.expand_dims(g, 0)
