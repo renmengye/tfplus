@@ -159,8 +159,7 @@ class ImageNetDataProvider(tfplus.data.DataProvider):
                 img.append(np.zeros(
                     [num_r, img_.shape[0], img_.shape[1], img_.shape[2]],
                     dtype='float32'))
-                y_gt.append(np.zeros(
-                    [num_r, 1000]), dtype='float32')
+                y_gt.append(np.zeros([num_r, 1000], dtype='float32'))
                 counter = 0
             img[rid][counter] = img_ * 255.0 - self.mean_img
             y_gt[rid][counter, self.labels[ii]] = 1.0
