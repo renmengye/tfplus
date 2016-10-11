@@ -14,7 +14,7 @@ class Factory(object):
 
     def register(self, name, cls):
         if name not in self._reg:
-            self.log.info('Registering class "{}"'.format(name))
+            self.log.info('Registering class "{}"'.format(name), verbose=2)
             self._reg[name] = cls
         else:
             raise Exception('Class "{}" already registered')

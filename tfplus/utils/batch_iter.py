@@ -26,6 +26,9 @@ class IBatchIterator(object):
 
     def reset(self):
         raise Exception('Not implemented')
+
+    def finalize(self):
+        return
     pass
 
 

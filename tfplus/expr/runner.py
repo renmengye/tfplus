@@ -237,6 +237,7 @@ class BasicRunner(SessionRunner):
     def finalize(self):
         for listener in self.listeners:
             listener.finalize()
+        self._iter.finalize()
         pass
 
     @property

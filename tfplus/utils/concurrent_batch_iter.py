@@ -149,8 +149,19 @@ class ConcurrentBatchIterator(IBatchIterator):
         return batch
 
     def reset(self):
+        self.finalize()
+        self.log.info('Resetting index', verbose=2)
+        self.batch_iter.reset()
+        self.log.info('Restarting workers', verbose=2)
+        self.fetchers = []
+        self.init_fetchers()
+        self.relaunch = True
+        pass
+
+    def finalize(self):
         self.log.info('Resetting concurrent batch iter', verbose=2)
         self.log.info('Stopping all workers', verbose=2)
+        self.relaunch = False
         for f in self.fetchers:
             f.stop()
         self.log.info('Cleaning queue', verbose=2)
@@ -160,19 +171,20 @@ class ConcurrentBatchIterator(IBatchIterator):
             f.join()
         self.q.join()
         cleaner.stop()
-        self.log.info('Resetting index', verbose=2)
-        self.batch_iter.reset()
-        self.log.info('Restarting workers', verbose=2)
-        self.fetchers = []
-        self.init_fetchers()
-        self.relaunch = True
         pass
     pass
 
 if __name__ == '__main__':
     from batch_iter import BatchIterator
+    log = tfplus.utils.logger.get()
+    log.info('Test next()')
     b = BatchIterator(100, batch_size=6, get_fn=None)
     cb = ConcurrentBatchIterator(b, max_queue_size=5, num_threads=3)
     for _batch in cb:
-        log = tfplus.utils.logger.get()
         log.info(('Final out', _batch))
+
+    cb.reset()
+    log.info('Test finalize()')
+    for ii in xrange(3):
+        log.info(('Final out', cb.next()))
+    cb.finalize()
