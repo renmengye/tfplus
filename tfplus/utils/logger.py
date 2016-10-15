@@ -170,11 +170,10 @@ class Logger(object):
         log_lock.acquire()
         if self.verbose_thresh >= verbose:
             print(printstr)
-
-        if self.filename is not None:
-            with open(self.filename, 'a') as f:
-                f.write(logstr)
-                f.write('\n')
+            if self.filename is not None:
+                with open(self.filename, 'a') as f:
+                    f.write(logstr)
+                    f.write('\n')
         log_lock.release()
         # print(threadstr, 'Released log lock')
         pass
