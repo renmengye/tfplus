@@ -106,6 +106,8 @@ class MLP(GraphBuilder):
         phase_train = inp['phase_train']
         if 'dropout_keep' in inp:
             dropout_keep = inp['dropout_keep']
+        else:
+            dropout_keep = None
         h = [None] * self.nlayers
         with tf.variable_scope(self.scope):
             for ii in xrange(self.nlayers):

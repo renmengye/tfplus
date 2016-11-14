@@ -128,11 +128,20 @@ class ResNetSBN(GraphBuilder):
                     for jj in xrange(self.layers[ii]):
 
                         # See whether this layer is trainable.
+                        self.log.debug(('Trainable', self.trainable))
+                        self.log.debug(('Last num', self.last_num_trainable))
                         if self.trainable:
                             if self.last_num_trainable < 0:
                                 _trainable = True
 
                             else:
+                                self.log.debug(
+                                    ('LNT', self.last_num_trainable))
+                                self.log.debug(
+                                    ('TL', total_num_layers))
+                                self.log.debug(
+                                    ('LC', layer_count))
+
                                 if layer_count >= total_num_layers - self.last_num_trainable:
                                     _trainable = True
                                 else:
