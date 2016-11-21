@@ -36,7 +36,7 @@ class LabelSampleDataProvider(DataProvider):
             # Only iterating the keys (equalize the weights between different
             # classes).
             if self.stats_provider is None:
-                return self._real_size * 10000
+                return self._real_size * self.data_provider.get_size()
             else:
                 return self.stats_provider.get_size()
         else:

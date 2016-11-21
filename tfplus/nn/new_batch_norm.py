@@ -2,36 +2,19 @@ from graph_builder import GraphBuilder
 import tensorflow as tf
 
 
-class BatchNorm(GraphBuilder):
+class NewBatchNorm(GraphBuilder):
 
-    def __init__(self, n_out, axes=[0, 1, 2], scope='bn',
-                 affine=True, init_beta=None, init_gamma=None, trainable=True,
-                 decay=0.9, eps=1e-3):
-        super(BatchNorm, self).__init__()
+    def __init__(self, n_out, axes=[0, 1, 2], scope='nbn', decay=0.9,
+                 trainable=True):
+        super(NewBatchNorm, self).__init__()
         self.n_out = n_out
         self.scope = scope
-        self.affine = affine
-        self.init_beta = init_beta
-        self.init_gamma = init_gamma
-        self.trainable = trainable
         self.decay = decay
         self.axes = axes
-        self.eps = eps
         pass
 
     def init_var(self):
-        trainable = self.trainable
         with tf.variable_scope(self.scope):
-            if self.init_beta is None:
-                self.init_beta = tf.constant(0.0, shape=[self.n_out])
-            if self.init_gamma is None:
-                self.init_gamma = tf.constant(1.0, shape=[self.n_out])
-            self.beta = self.declare_var(
-                [self.n_out], init_val=self.init_beta, name='beta',
-                trainable=trainable)
-            self.gamma = self.declare_var(
-                [self.n_out], init_val=self.init_gamma, name='gamma',
-                trainable=trainable)
             self.ema = tf.train.ExponentialMovingAverage(decay=self.decay)
             self.batch_mean = None
             self.batch_var = None
@@ -68,8 +51,10 @@ class BatchNorm(GraphBuilder):
             mean, var = tf.cond(phase_train,
                                 mean_var_with_update,
                                 mean_var_no_update)
+
             normed = tf.nn.batch_normalization(
-                x, mean, var, self.beta, self.gamma, self.eps)
+                x, mean, var, tf.zeros([self.n_out]),
+                tf.ones([self.n_out]), 1.0)
         return normed
 
     def get_shadow_ema(self):
@@ -78,6 +63,8 @@ class BatchNorm(GraphBuilder):
 
     def get_save_var_dict(self):
         ema_mean, ema_var = self.get_shadow_ema()
-        return {'beta': self.beta, 'gamma': self.gamma, 'ema_mean': ema_mean,
-                'ema_var': ema_var}
+        return {
+            'ema_mean': ema_mean,
+            'ema_var': ema_var
+        }
     pass

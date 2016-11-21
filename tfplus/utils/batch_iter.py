@@ -26,6 +26,9 @@ class IBatchIterator(object):
 
     def reset(self):
         raise Exception('Not implemented')
+
+    def finalize(self):
+        return
     pass
 
 
@@ -149,9 +152,11 @@ class BatchIterator(IBatchIterator):
             end = end % self._num
             if end > start:
                 idx = np.arange(start, end)
+                idx = idx.astype('int')
                 idx = self._shuffle_idx[idx]
             else:
                 idx = np.array(range(start, self._num) + range(0, end))
+                idx = idx.astype('int')
                 idx = self._shuffle_idx[idx]
                 # Shuffle every cycle.
                 if self._shuffle:

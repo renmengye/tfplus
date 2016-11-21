@@ -4,7 +4,7 @@ import numpy as np
 import tfplus
 import tensorflow as tf
 
-from tfplus.nn import ResNetSBN, MaxPool, AvgPool, BatchNorm, Linear, Conv2DW
+from tfplus.nn import ResNetSBN, MaxPool, AvgPool, BatchNorm, Linear, Conv2DW, NewBatchNorm
 
 
 class ResNetImageNetModel(tfplus.nn.Model):
@@ -29,6 +29,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
         self.set_default_option('compatible', False)
         self.set_default_option('subtract_mean', False)
         self.set_default_option('trainable', True)
+        self.set_default_option('new_bn', False)
         pass
 
     def init_var(self):
@@ -43,10 +44,16 @@ class ResNetImageNetModel(tfplus.nn.Model):
         shortcut = self.get_option('shortcut')
         compatible = self.get_option('compatible')
         trainable = self.get_option('trainable')
+        new_bn = self.get_option('new_bn')
+        if new_bn:
+            self.bn_cls = NewBatchNorm
+            self.log.info('Using new batch norm')
+        else:
+            self.bn_cls = BatchNorm
         self.conv1 = Conv2DW(
             f=7, ch_in=inp_depth, ch_out=channels[0], stride=2, wd=wd,
             scope='conv', bias=False, trainable=trainable)
-        self.bn1 = BatchNorm(channels[0], trainable=trainable)
+        self.bn1 = self.bn_cls(channels[0], trainable=trainable)
         self.res_net = ResNetSBN(layers=layers,
                                  channels=channels,
                                  strides=strides,
@@ -54,7 +61,7 @@ class ResNetImageNetModel(tfplus.nn.Model):
                                  shortcut=shortcut,
                                  compatible=compatible,
                                  trainable=trainable,
-                                 wd=wd)
+                                 wd=wd, new_bn=new_bn)
         self.fc = Linear(d_in=channels[-1],
                          d_out=num_classes, wd=wd, scope='fc', bias=True,
                          trainable=trainable)
@@ -81,8 +88,8 @@ class ResNetImageNetModel(tfplus.nn.Model):
         subtract_mean = self.get_option('subtract_mean')
         if subtract_mean:
             x = x * 255.0 - self._img_mean  # raw 0-255 values.
-        else:
-            x = x * 2.0 - 1.0       # center at [-1, 1].
+        # else:
+        #     x = x * 2.0 - 1.0       # center at [-1, 1].
         
         if not self.has_var('x_sub'):
             self.register_var('x_sub', x)

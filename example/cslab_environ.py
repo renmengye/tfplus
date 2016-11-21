@@ -2,6 +2,8 @@ import sys
 import os
 import socket
 
+sys.path.insert(0, '../tfplus')
+
 if os.path.exists('/u/mren'):
     hostname = socket.gethostname()
     if hostname.startswith('guppy'):

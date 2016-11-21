@@ -1005,7 +1005,7 @@ synset_map = {}
 synset_list = {}
 for i, l in enumerate(synset):
     label, desc = l.split(' ', 1)
-    synset_map[label] = {"index": i, "desc": desc, }
+    synset_map[label] = {"index": i, "desc": desc}
     synset_list[i] = {"label": label, "desc": desc}
 
 
@@ -1018,4 +1018,4 @@ def get_desc(label):
 
 
 def get_label(index):
-    return synset_list[index]['desc']
+    return synset_list[index]['label']

@@ -84,8 +84,6 @@ class Logger(object):
     else:
       self.filename = None
 
-    pass
-
   @staticmethod
   def get_time_str(t=None):
     """
